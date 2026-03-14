@@ -228,7 +228,6 @@ div[data-testid="stMetricValue"] {
 def load_data():
     dfs = []
 
-    # ① メインCSV（全件）
     for fname in [
         "knight_scoop_all_keywords_investigation.csv",
         "animals_palindrome_v4.csv",
@@ -236,16 +235,27 @@ def load_data():
     ]:
         try:
             df = pd.read_csv(fname)
+            # ── ★ 空ファイル・必要カラム不足を弾く ──
+            if df.empty:
+                continue
+            required = {"ワード", "回文判定"}
+            if not required.issubset(df.columns):
+                continue
             dfs.append(df)
-        except FileNotFoundError:
-            pass
+        except (FileNotFoundError, pd.errors.EmptyDataError, pd.errors.ParserError):
+            # ファイルなし・空・壊れている → スキップ
+            continue
+        except Exception as e:
+            st.sidebar.warning(f"⚠️ {fname} 読み込みスキップ: {e}")
+            continue
 
     if dfs:
         df_all = pd.concat(dfs, ignore_index=True).drop_duplicates(subset="ワード")
     else:
+        # ── ★ CSV が1件もなくても落ちない空DataFrame ──
         df_all = pd.DataFrame(columns=["品詞","品詞細分類","ワード","ヨミガナ","音素","回文判定"])
 
-    # ② 手動追加（伝説のワード）
+    # 手動追加（伝説のワード）
     legendary = [
         {"品詞":"特別枠","品詞細分類":"伝説","ワード":"オオエンマハンミョウ",
          "ヨミガナ":"オオエンマハンミョウ","音素":"o o e m m a h a m m y o o","回文判定":"〇"},
@@ -258,6 +268,11 @@ def load_data():
     new_rows = [lw for lw in legendary if lw["ワード"] not in existing]
     if new_rows:
         df_all = pd.concat([pd.DataFrame(new_rows), df_all], ignore_index=True)
+
+    # ── ★ 必須カラムが欠けている場合も補完 ──
+    for col in ["品詞","品詞細分類","ワード","ヨミガナ","音素","回文判定"]:
+        if col not in df_all.columns:
+            df_all[col] = ""
 
     return df_all
 
