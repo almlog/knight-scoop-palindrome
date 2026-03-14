@@ -2,4 +2,3 @@ streamlit
 pandas
 gTTS
 pydub
-pyaudioop
