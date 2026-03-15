@@ -684,44 +684,66 @@ with tab1:
 
     # ── 件数表示 ──
     hit_count = len(df_display[df_display["回文判定"] == "〇"])
+    total_count = len(df_display)
     st.markdown(
         f'<div class="section-heading">'
-        f'{len(df_display):,} 件'
+        f'{total_count:,} 件'
         f'{"　（うち回文ヒット: " + str(hit_count) + " 件）" if hit_count > 0 else ""}'
         f'</div>',
         unsafe_allow_html=True,
     )
 
-    st.dataframe(
-        df_display[["品詞", "品詞細分類", "ワード", "ヨミガナ", "音素", "回文判定"]],
-        use_container_width=True,
-        height=600,
-    )
-
-    # ── ヒットワード再生セクション ──
-    df_display_hits = df_display[df_display["回文判定"] == "〇"]
-    if not df_display_hits.empty:
-        st.markdown(
-            f'<div class="section-heading">🔊 このカテゴリの回文ヒット（{len(df_display_hits)} 件）</div>',
-            unsafe_allow_html=True,
+    # ── ワード表示 ──
+    MAX_CARD_ROWS = 5000
+    if len(df_display) > MAX_CARD_ROWS:
+        st.dataframe(
+            df_display[["品詞", "品詞細分類", "ワード", "ヨミガナ", "音素", "回文判定"]],
+            use_container_width=True,
+            height=600,
         )
+        st.caption(f"※ {MAX_CARD_ROWS:,}件以下に絞り込むとカード表示に切り替わります")
+    else:
         cols = st.columns(3)
-        for idx, (_, hrow) in enumerate(df_display_hits.iterrows()):
+        for idx, (_, row) in enumerate(df_display.iterrows()):
+            is_hit = row["回文判定"] == "〇"
+            quality = row.get("品質", "green")
+
+            if is_hit:
+                if quality == "green":
+                    icon, border_color, badge_bg, badge_color, badge_text = "🟢", "#2e7d32", "#2e7d32", "#fff", "新発見"
+                else:
+                    icon, border_color, badge_bg, badge_color, badge_text = "🟡", "#f9a825", "#f9a825", "#333", "参考"
+            else:
+                icon, border_color, badge_bg, badge_color, badge_text = "", "#e0e0e0", "", "", ""
+
             with cols[idx % 3]:
-                st.markdown(
-                    f'<div style="background:#fff;border:1px solid #e0e0e0;border-left:4px solid #e53935;'
-                    f'border-radius:8px;padding:0.8rem 1rem;margin:0.3rem 0">'
-                    f'<div style="font-family:\'Noto Serif JP\',serif;font-size:1.1rem;color:#1a237e;font-weight:700">{hrow["ワード"]}</div>'
-                    f'<div style="font-family:monospace;font-size:0.7rem;color:#888">{hrow.get("ヨミガナ", "")}　[ {hrow.get("音素", "")} ]</div>'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
-                play_audio_inline(
-                    hrow["ワード"],
-                    hrow.get("ヨミガナ", hrow["ワード"]),
-                    f"tab1_{idx}",
-                )
-        render_fixed_player("tab1")
+                if is_hit:
+                    st.markdown(
+                        f'<div class="hit-card" style="border-left-color:{border_color}">'
+                        f'<span class="hit-badge" style="background:{badge_bg};color:{badge_color}">{icon} {badge_text}</span>'
+                        f'<div class="hit-word">{row["ワード"]}</div>'
+                        f'<div class="hit-yomi">{row.get("ヨミガナ", "")}</div>'
+                        f'<div class="phoneme-row">[ {row.get("音素", "")} ]</div>'
+                        f'<div class="hit-meta">{row.get("品詞細分類", "")}</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+                    play_audio_inline(
+                        row["ワード"],
+                        row.get("ヨミガナ", row["ワード"]),
+                        f"tab1_{idx}",
+                    )
+                else:
+                    st.markdown(
+                        f'<div style="background:#fafafa;border:1px solid #eee;border-left:3px solid #e0e0e0;'
+                        f'border-radius:8px;padding:0.6rem 0.8rem;margin:0.3rem 0">'
+                        f'<div style="font-size:0.95rem;color:#666">{row["ワード"]}</div>'
+                        f'<div style="font-size:0.65rem;color:#bbb">{row.get("ヨミガナ", "")}　{row.get("品詞細分類", "")}</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+
+    render_fixed_player("tab1")
 
 
 # ═══════════════════════════════════════════════════════════
