@@ -610,12 +610,10 @@ def play_audio_inline(word, key_suffix):
         if st.button("▶ 通常", key=f"n_{key_suffix}"):
             st.session_state.play_word = word
             st.session_state.play_mode = "normal"
-            st.rerun()
     with b2:
         if st.button("◀ 逆再生", key=f"r_{key_suffix}"):
             st.session_state.play_word = word
             st.session_state.play_mode = "reverse"
-            st.rerun()
 
 
 def render_word_cards(df_words, key_prefix, show_quality=False):
@@ -683,9 +681,14 @@ def render_fixed_player(tab_key):
     if st.session_state.play_word:
         pw = st.session_state.play_word
         pm = st.session_state.play_mode
-        with st.spinner(f"「{pw}」の音声を生成中..."):
-            normal_b, rev_b = generate_audio(pw)
         mode_label = "▶ 通常再生" if pm == "normal" else "◀ 逆再生"
+        mode_icon = "▶" if pm == "normal" else "◀"
+
+        with st.status(f"{mode_icon} {pw}", expanded=True) as status:
+            status.update(label=f"{mode_icon} {pw}　─　🔄 音声を生成しています...", state="running")
+            normal_b, rev_b = generate_audio(pw)
+            status.update(label=f"{mode_icon} {pw}　─　{mode_label}", state="complete")
+
         st.markdown(
             f'<div class="fixed-player-bar">'
             f'<span class="fixed-player-word">{pw}</span>'
