@@ -710,7 +710,7 @@ with tab2:
         df_normal_hits = df_hits[df_hits["品詞細分類"] != "伝説"]
 
         def play_audio_inline(word, key_prefix):
-            """ボタンを配置し、該当ワードが再生中ならその場にプレイヤーを表示。"""
+            """ボタン押下で即座に音声再生。"""
             is_playing = st.session_state.play_word == word
             b1, b2 = st.columns(2)
             with b1:
@@ -725,7 +725,11 @@ with tab2:
                     st.rerun()
             if is_playing:
                 normal_b, rev_b = generate_audio(word)
-                st.audio(normal_b if st.session_state.play_mode == "normal" else rev_b, format="audio/mp3")
+                st.audio(
+                    normal_b if st.session_state.play_mode == "normal" else rev_b,
+                    format="audio/mp3",
+                    autoplay=True,
+                )
 
         if not df_legendary.empty:
             st.markdown('<div class="section-heading">👑 伝説のワード</div>', unsafe_allow_html=True)
