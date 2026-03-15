@@ -426,6 +426,8 @@ if "play_reading" not in st.session_state:
     st.session_state.play_reading = None
 if "play_mode" not in st.session_state:
     st.session_state.play_mode = None
+if "play_count" not in st.session_state:
+    st.session_state.play_count = 0
 
 
 # ── ナイトスクープ愛バナー ──────────────────────────────────
@@ -528,11 +530,13 @@ def play_audio_inline(word, reading, key_suffix):
             st.session_state.play_word = word
             st.session_state.play_reading = reading
             st.session_state.play_mode = "normal"
+            st.session_state.play_count += 1
     with b2:
         if st.button("◀ 逆再生", key=f"r_{key_suffix}"):
             st.session_state.play_word = word
             st.session_state.play_reading = reading
             st.session_state.play_mode = "reverse"
+            st.session_state.play_count += 1
 
 
 def render_word_cards(df_words, key_prefix, show_quality=False):
@@ -617,10 +621,12 @@ def render_fixed_player(tab_key):
             f'</div>',
             unsafe_allow_html=True,
         )
+        pc = st.session_state.play_count
         st.audio(
             normal_b if pm == "normal" else rev_b,
             format="audio/mp3",
             autoplay=True,
+            key=f"audio_{tab_key}_{pc}",
         )
         if st.button("閉じる", key=f"close_player_{tab_key}"):
             st.session_state.play_word = None
