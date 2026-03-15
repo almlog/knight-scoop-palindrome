@@ -7,141 +7,247 @@ from pydub import AudioSegment
 
 # ── ページ設定 ─────────────────────────────────────────────
 st.set_page_config(
-    page_title="逆再生ワード発見器",
-    page_icon="🔄",
+    page_title="音素回文発見プロジェクト｜探偵ナイトスクープ",
+    page_icon="🔍",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# ── カスタムCSS ───────────────────────────────────────────
+# ── カスタムCSS（白基調・スタイリッシュ）─────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Zen+Antique+Soft&family=Share+Tech+Mono&family=Noto+Sans+JP:wght@400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Zen+Antique+Soft&family=Noto+Sans+JP:wght@300;400;500;700;900&family=Share+Tech+Mono&display=swap');
 
 html, body, [class*="css"] {
     font-family: 'Noto Sans JP', sans-serif;
 }
+
+/* ── 全体背景：白基調 ── */
 .stApp {
-    background: #0a0a12;
-    color: #e8e4d9;
+    background: #fafafa;
+    color: #333;
 }
+
+/* ── サイドバー ── */
 [data-testid="stSidebar"] {
-    background: #0f0f1e !important;
-    border-right: 1px solid #2a2a4a;
+    background: #ffffff !important;
+    border-right: 1px solid #e0e0e0;
 }
 [data-testid="stSidebar"] * {
-    color: #c8c4b8 !important;
+    color: #555 !important;
 }
+
+/* ── ヘッダーセクション ── */
+header[data-testid="stHeader"] {
+    background: transparent;
+}
+
+/* ── ナイトスクープ愛バナー ── */
+.knight-banner {
+    background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #3949ab 100%);
+    border-radius: 16px;
+    padding: 2.5rem 2rem;
+    margin-bottom: 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(26, 35, 126, 0.15);
+}
+.knight-banner::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 50%, rgba(255,255,255,0.05) 0%, transparent 50%);
+}
+.knight-banner-title {
+    font-family: 'Zen Antique Soft', serif;
+    font-size: 1.6rem;
+    color: #ffffff;
+    letter-spacing: 0.15em;
+    margin-bottom: 0.8rem;
+    position: relative;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.knight-banner-message {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.85);
+    line-height: 1.9;
+    position: relative;
+    max-width: 700px;
+    margin: 0 auto;
+}
+.knight-banner-footer {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.5);
+    margin-top: 1.2rem;
+    position: relative;
+    letter-spacing: 0.08em;
+}
+
+/* ── メインタイトル ── */
 .main-title {
     font-family: 'Zen Antique Soft', serif;
-    font-size: 2.4rem;
-    color: #f0e68c;
-    text-shadow: 0 0 30px rgba(240,230,140,0.4);
-    letter-spacing: 0.05em;
-    margin-bottom: 0.2rem;
+    font-size: 2rem;
+    color: #1a237e;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.1rem;
+    font-weight: 700;
 }
 .sub-title {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.85rem;
-    color: #6a7a9a;
-    letter-spacing: 0.1em;
-    margin-bottom: 2rem;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.82rem;
+    color: #999;
+    letter-spacing: 0.08em;
+    margin-bottom: 1.8rem;
+    font-weight: 300;
 }
+
+/* ── 統計カード ── */
+.stat-box {
+    background: #ffffff;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    padding: 1.2rem 1rem;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.stat-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+.stat-num {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 2rem;
+    color: #1a237e;
+    font-weight: 700;
+}
+.stat-label {
+    font-size: 0.7rem;
+    color: #999;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-top: 0.3rem;
+}
+
+/* ── セクション見出し ── */
+.section-heading {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 1rem;
+    color: #333;
+    border-bottom: 2px solid #1a237e;
+    padding-bottom: 0.4rem;
+    margin: 1.5rem 0 1rem;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+}
+
+/* ── 発見カード ── */
 .hit-card {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-    border: 1px solid #e94560;
-    border-left: 4px solid #e94560;
-    border-radius: 8px;
+    background: #ffffff;
+    border: 1px solid #e8e8e8;
+    border-left: 4px solid #e53935;
+    border-radius: 10px;
     padding: 1.2rem 1.5rem;
     margin: 0.5rem 0;
     position: relative;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.hit-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
 }
 .hit-badge {
     position: absolute;
     top: -10px;
     right: 12px;
-    background: #e94560;
+    background: #e53935;
     color: white;
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     font-weight: 900;
-    padding: 2px 8px;
+    padding: 2px 10px;
     border-radius: 10px;
     letter-spacing: 0.1em;
 }
 .hit-word {
     font-family: 'Zen Antique Soft', serif;
-    font-size: 1.6rem;
-    color: #f0e68c;
+    font-size: 1.5rem;
+    color: #1a237e;
     font-weight: bold;
     letter-spacing: 0.08em;
 }
 .hit-yomi {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 0.8rem;
-    color: #a0b0c0;
+    font-size: 0.78rem;
+    color: #888;
     margin-top: 0.2rem;
 }
 .phoneme-row {
     font-family: 'Share Tech Mono', monospace;
-    font-size: 0.78rem;
-    color: #4ecdc4;
+    font-size: 0.75rem;
+    color: #43a047;
     margin-top: 0.4rem;
     letter-spacing: 0.05em;
 }
 .hit-meta {
-    font-size: 0.72rem;
-    color: #6a7a8a;
+    font-size: 0.7rem;
+    color: #aaa;
     margin-top: 0.3rem;
 }
+
+/* ── 伝説カード ── */
 .legendary-card {
-    background: linear-gradient(135deg, #2a1a00 0%, #3a2000 50%, #1a1000 100%);
-    border: 2px solid #f0a030;
-    border-left: 6px solid #f0a030;
-    border-radius: 10px;
-    padding: 1.5rem 2rem;
+    background: linear-gradient(135deg, #fff8e1 0%, #fff3c4 50%, #fffde7 100%);
+    border: 2px solid #ff8f00;
+    border-left: 6px solid #ff8f00;
+    border-radius: 12px;
+    padding: 1.8rem 2rem;
     margin: 1rem 0;
     position: relative;
+    box-shadow: 0 4px 16px rgba(255,143,0,0.12);
 }
 .legendary-badge {
     position: absolute;
     top: -12px;
     right: 14px;
-    background: linear-gradient(90deg, #f0a030, #f0e068);
-    color: #1a0a00;
-    font-size: 0.7rem;
+    background: linear-gradient(90deg, #ff8f00, #ffb300);
+    color: #fff;
+    font-size: 0.68rem;
     font-weight: 900;
-    padding: 3px 10px;
+    padding: 3px 12px;
     border-radius: 12px;
     letter-spacing: 0.12em;
 }
 .legendary-word {
     font-family: 'Zen Antique Soft', serif;
     font-size: 2rem;
-    color: #f0d060;
-    text-shadow: 0 0 20px rgba(240,200,80,0.5);
+    color: #e65100;
     letter-spacing: 0.1em;
 }
+
+/* ── 選択ワード表示 ── */
 .selected-word-box {
-    background: linear-gradient(180deg, #1e1e3a 0%, #12122a 100%);
-    border: 1px solid #3a3a6a;
-    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 16px;
     padding: 2rem;
     text-align: center;
     margin-bottom: 1.5rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.05);
 }
 .selected-word-main {
     font-family: 'Zen Antique Soft', serif;
-    font-size: 3rem;
-    text-shadow: 0 0 40px rgba(240,230,140,0.5);
+    font-size: 2.8rem;
     letter-spacing: 0.12em;
+    font-weight: 700;
 }
-.selected-phoneme {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 0.9rem;
-    color: #4ecdc4;
-    margin-top: 0.5rem;
-    letter-spacing: 0.08em;
-}
+
+/* ── 音素チップ ── */
 .phoneme-viz {
     display: flex;
     justify-content: center;
@@ -150,61 +256,81 @@ html, body, [class*="css"] {
     margin: 1rem 0;
 }
 .ph-chip {
-    background: #1e3a4a;
-    border: 1px solid #2a5a7a;
-    border-radius: 4px;
-    padding: 4px 10px;
+    background: #e8f5e9;
+    border: 1px solid #c8e6c9;
+    border-radius: 6px;
+    padding: 4px 12px;
     font-family: 'Share Tech Mono', monospace;
     font-size: 0.85rem;
-    color: #4ecdc4;
+    color: #2e7d32;
 }
 .ph-chip-rev {
-    background: #3a1e2e;
-    border: 1px solid #7a2a4a;
-    color: #ff6b9d;
+    background: #fce4ec;
+    border: 1px solid #f8bbd0;
+    color: #c62828;
 }
-.stat-box {
-    background: #12122a;
-    border: 1px solid #2a2a4a;
-    border-radius: 8px;
-    padding: 1rem;
-    text-align: center;
-}
-.stat-num {
-    font-family: 'Share Tech Mono', monospace;
-    font-size: 2rem;
-    color: #f0e68c;
-}
-.stat-label {
-    font-size: 0.72rem;
-    color: #6a7a8a;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-}
-.section-heading {
-    font-family: 'Zen Antique Soft', serif;
-    font-size: 1.1rem;
-    color: #a0b0d0;
-    border-bottom: 1px solid #2a2a4a;
-    padding-bottom: 0.4rem;
-    margin: 1.5rem 0 1rem;
-    letter-spacing: 0.08em;
-}
+
+/* ── プレイヤーラベル ── */
 .player-label-normal {
     font-size: 0.8rem;
-    color: #4ecdc4;
-    font-weight: bold;
+    color: #1a237e;
+    font-weight: 700;
     letter-spacing: 0.1em;
     margin-bottom: 0.5rem;
     text-align: center;
 }
 .player-label-reverse {
     font-size: 0.8rem;
-    color: #ff6b9d;
-    font-weight: bold;
+    color: #e53935;
+    font-weight: 700;
     letter-spacing: 0.1em;
     margin-bottom: 0.5rem;
     text-align: center;
+}
+
+/* ── ナイトスクープ風フッター ── */
+.knight-footer {
+    text-align: center;
+    padding: 2rem 1rem;
+    margin-top: 3rem;
+    border-top: 1px solid #eee;
+    color: #bbb;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+}
+
+/* ── ボタンスタイル ── */
+.stButton > button {
+    background: #ffffff;
+    border: 1px solid #ddd;
+    color: #1a237e;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+}
+.stButton > button:hover {
+    background: #1a237e;
+    color: #fff;
+    border-color: #1a237e;
+}
+
+/* ── Streamlit要素の調整 ── */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 0;
+    background: #fff;
+    border-radius: 12px;
+    padding: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.stTabs [data-baseweb="tab"] {
+    border-radius: 8px;
+    color: #666;
+    font-weight: 500;
+    padding: 0.5rem 1.5rem;
+}
+.stTabs [aria-selected="true"] {
+    background: #1a237e !important;
+    color: #fff !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -230,7 +356,7 @@ def load_data():
         except FileNotFoundError:
             continue
         except Exception as e:
-            st.sidebar.warning(f"⚠️ {fname}: {e}")
+            st.sidebar.warning(f"⚠ {fname}: {e}")
             continue
 
     if dfs:
@@ -238,7 +364,6 @@ def load_data():
     else:
         df_all = pd.DataFrame(columns=["品詞", "品詞細分類", "ワード", "ヨミガナ", "音素", "回文判定"])
 
-    # ── 伝説のワード（オオエンマハンミョウのみ）──
     legendary = [
         {
             "品詞": "特別枠",
@@ -266,15 +391,46 @@ df_hits = df_all[df_all["回文判定"] == "〇"].copy()
 df_miss = df_all[df_all["回文判定"] != "〇"].copy()
 
 
+# ── セッション状態の初期化 ──────────────────────────────────
+if "selected_word_for_audio" not in st.session_state:
+    st.session_state.selected_word_for_audio = None
+if "active_tab" not in st.session_state:
+    st.session_state.active_tab = None
+
+
+# ── ナイトスクープ愛バナー ──────────────────────────────────
+st.markdown("""
+<div class="knight-banner">
+    <div class="knight-banner-title">
+        探偵ナイトスクープ様へ
+    </div>
+    <div class="knight-banner-message">
+        毎週、家族そろってTVerで観るのが我が家の楽しみでした。<br>
+        いつか何かの形で、この大好きな番組に関われたら──<br>
+        そんな夢をずっと抱いていました。<br><br>
+        「逆から読んでも"オオエンマハンミョウ"」の回を観たとき、<br>
+        心の底から感動しました。<br>
+        <strong>「これならば、自分のプログラミングの経験が役に立てる」</strong>と確信し、<br>
+        AIとプログラミングを駆使して、日本語<strong>31万語以上</strong>の音素解析に挑みました。<br><br>
+        結果、<strong>351個</strong>の音素回文を発見。<br>
+        この成果を、番組への感謝と愛を込めてお届けします。
+    </div>
+    <div class="knight-banner-footer">
+        ── 探偵ナイトスクープを愛する一視聴者・一エンジニアより ──
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+
 # ── ヘッダー ──────────────────────────────────────────────
-st.markdown('<div class="main-title">🔄 逆再生ワード発見器</div>', unsafe_allow_html=True)
-st.markdown('<div class="sub-title">探偵ナイトスクープ提出用 ／ 音素回文調査システム</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-title">音素回文発見プロジェクト</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-title">Phonemic Palindrome Discovery System</div>', unsafe_allow_html=True)
 
 c1, c2, c3, c4 = st.columns(4)
 with c1:
     st.markdown(f'<div class="stat-box"><div class="stat-num">{len(df_all):,}</div><div class="stat-label">総調査ワード</div></div>', unsafe_allow_html=True)
 with c2:
-    st.markdown(f'<div class="stat-box"><div class="stat-num" style="color:#e94560">{len(df_hits):,}</div><div class="stat-label">🎉 回文ヒット</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="stat-box"><div class="stat-num" style="color:#e53935">{len(df_hits):,}</div><div class="stat-label">回文ヒット</div></div>', unsafe_allow_html=True)
 with c3:
     rate = len(df_hits) / len(df_all) * 100 if len(df_all) > 0 else 0
     st.markdown(f'<div class="stat-box"><div class="stat-num">{rate:.2f}%</div><div class="stat-label">ヒット率</div></div>', unsafe_allow_html=True)
@@ -286,21 +442,21 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 
 # ── サイドバー ────────────────────────────────────────────
-st.sidebar.markdown("### 🔍 絞り込みフィルター")
+st.sidebar.markdown("### 絞り込みフィルター")
 
 st.sidebar.markdown("**回文判定**")
 判定フィルター = st.sidebar.radio(
     label="判定",
-    options=["🎉 発見ワードのみ（〇）", "📋 全件表示", "❌ 未該当のみ（×）"],
+    options=["発見ワードのみ（〇）", "全件表示", "未該当のみ（×）"],
     index=0,
     label_visibility="collapsed",
 )
 
 st.sidebar.markdown("---")
 
-if 判定フィルター == "🎉 発見ワードのみ（〇）":
+if 判定フィルター == "発見ワードのみ（〇）":
     df_target = df_hits.copy()
-elif 判定フィルター == "❌ 未該当のみ（×）":
+elif 判定フィルター == "未該当のみ（×）":
     df_target = df_miss.copy()
 else:
     df_target = df_all.copy()
@@ -322,22 +478,21 @@ if selected_sub != "すべて":
 
 st.sidebar.markdown("---")
 
-# 回文ヒット内訳
-st.sidebar.markdown("**📊 回文ヒット内訳**")
+st.sidebar.markdown("**回文ヒット内訳**")
 if len(df_hits) > 0:
     hit_by_pos = df_hits.groupby("品詞").size().sort_values(ascending=False)
     for pos, cnt in hit_by_pos.items():
         st.sidebar.markdown(
-            f'<span style="font-size:0.75rem;color:#a0b0c0">'
+            f'<span style="font-size:0.75rem;color:#666">'
             f'{str(pos)[:8]}&nbsp;&nbsp;'
-            f'<span style="color:#e94560;font-family:monospace">{cnt}件</span>'
+            f'<span style="color:#e53935;font-family:monospace;font-weight:700">{cnt}件</span>'
             f'</span>',
             unsafe_allow_html=True,
         )
 
 st.sidebar.markdown("---")
 st.sidebar.markdown(
-    f'<span style="font-size:0.75rem;color:#6a7a8a">表示中: {len(df_target):,} 件</span>',
+    f'<span style="font-size:0.75rem;color:#999">表示中: {len(df_target):,} 件</span>',
     unsafe_allow_html=True,
 )
 
@@ -376,9 +531,15 @@ with tab1:
             st.warning("条件に合うワードがありません")
             st.stop()
 
+        # 他タブからの選択があればそれを初期値にする
+        default_index = 0
+        if st.session_state.selected_word_for_audio and st.session_state.selected_word_for_audio in word_options:
+            default_index = word_options.index(st.session_state.selected_word_for_audio)
+
         selected_word = st.selectbox(
             "聴きたいワードを選択",
             word_options,
+            index=default_index,
             label_visibility="collapsed",
         )
 
@@ -391,23 +552,25 @@ with tab1:
 
         # ワード大表示
         if is_legendary:
-            badge = '<span style="background:linear-gradient(90deg,#f0a030,#f0e068);color:#1a0a00;font-size:0.65rem;padding:2px 10px;border-radius:10px;font-weight:900">👑 伝説のワード</span>'
-            word_color = "#f0d060"
+            badge = '<span style="background:linear-gradient(90deg,#ff8f00,#ffb300);color:#fff;font-size:0.65rem;padding:2px 10px;border-radius:10px;font-weight:900">👑 伝説のワード</span>'
+            word_color = "#e65100"
         elif is_hit:
-            badge = '<span style="background:#e94560;color:white;font-size:0.65rem;padding:2px 8px;border-radius:10px;font-weight:900">🎉 発見ワード!!</span>'
-            word_color = "#f0e68c"
+            badge = '<span style="background:#e53935;color:white;font-size:0.65rem;padding:2px 8px;border-radius:10px;font-weight:900">発見ワード</span>'
+            word_color = "#1a237e"
         else:
             badge = ""
-            word_color = "#c8c4b8"
+            word_color = "#555"
 
         st.markdown(f"""
         <div class="selected-word-box">
             {badge}
             <div class="selected-word-main" style="color:{word_color}">{selected_word}</div>
-            <div style="font-size:0.85rem;color:#6a7a9a;margin-top:0.3rem">
+            <div style="font-size:0.85rem;color:#999;margin-top:0.3rem">
                 {row.get('品詞', '')} / {row.get('品詞細分類', '')}
             </div>
-            <div class="selected-phoneme">[ {" · ".join(phonemes)} ]</div>
+            <div style="font-family:'Share Tech Mono',monospace;font-size:0.88rem;color:#43a047;margin-top:0.5rem">
+                [ {" · ".join(phonemes)} ]
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -416,7 +579,7 @@ with tab1:
         fwd_html = "".join([f'<span class="ph-chip">{p}</span>' for p in phonemes])
         rev_html = "".join([f'<span class="ph-chip ph-chip-rev">{p}</span>' for p in phonemes_rev])
         st.markdown(f'<div class="phoneme-viz">{fwd_html}</div>', unsafe_allow_html=True)
-        st.markdown('<div style="text-align:center;color:#6a7a8a;font-size:0.8rem;margin:0.3rem 0">▼ 逆再生</div>', unsafe_allow_html=True)
+        st.markdown('<div style="text-align:center;color:#999;font-size:0.8rem;margin:0.3rem 0">▼ 逆再生</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="phoneme-viz">{rev_html}</div>', unsafe_allow_html=True)
 
         if is_hit and phonemes:
@@ -443,33 +606,52 @@ with tab1:
 
         if is_legendary:
             st.markdown("""
-            <div style="background:linear-gradient(135deg,#2a1a00,#3a2800);
-                        border:2px solid #f0a030;border-radius:12px;
-                        padding:1.5rem;margin-top:1rem;text-align:center;">
+            <div style="background:linear-gradient(135deg,#fff8e1,#fff3c4);
+                        border:2px solid #ff8f00;border-radius:16px;
+                        padding:1.5rem;margin-top:1rem;text-align:center;
+                        box-shadow:0 4px 16px rgba(255,143,0,0.1)">
                 <div style="font-size:2.5rem">👑</div>
                 <div style="font-family:'Zen Antique Soft',serif;font-size:1.4rem;
-                            color:#f0d060;margin:0.3rem 0;
-                            text-shadow:0 0 20px rgba(240,200,80,0.5)">
-                    伝説のワード確定！！
+                            color:#e65100;margin:0.3rem 0">
+                    伝説のワード
                 </div>
-                <div style="font-size:0.85rem;color:#c0a060;margin-top:0.5rem">
-                    探偵ナイトスクープ 大発見候補
+                <div style="font-size:0.85rem;color:#bf360c;margin-top:0.5rem">
+                    探偵ナイトスクープが発見した原点にして頂点
                 </div>
             </div>
             """, unsafe_allow_html=True)
         elif is_hit:
             st.markdown("""
-            <div style="background:linear-gradient(135deg,#1a0a12,#2a0a1e);
-                        border:1px solid #e94560;border-radius:10px;
-                        padding:1.2rem;margin-top:1rem;text-align:center;">
-                <div style="font-size:1.8rem">🎉</div>
-                <div style="font-family:'Zen Antique Soft',serif;font-size:1.2rem;
-                            color:#f0e68c;margin:0.3rem 0">発見ワード確定！！</div>
-                <div style="font-size:0.8rem;color:#a0b0c0">
+            <div style="background:#fff;border:1px solid #e53935;border-radius:12px;
+                        padding:1.2rem;margin-top:1rem;text-align:center;
+                        box-shadow:0 2px 8px rgba(229,57,53,0.08)">
+                <div style="font-size:1.2rem;color:#e53935;font-weight:700;margin:0.3rem 0">
+                    音素回文 確認済み
+                </div>
+                <div style="font-size:0.8rem;color:#888">
                     このワードは逆再生しても同じ音に聞こえます
                 </div>
             </div>
             """, unsafe_allow_html=True)
+
+        # 「オオエンマハンミョウ」ストーリーセクション
+        st.markdown('<div class="section-heading">このプロジェクトについて</div>', unsafe_allow_html=True)
+        st.markdown("""
+        <div style="background:#fff;border:1px solid #eee;border-radius:12px;padding:1.5rem;
+                    box-shadow:0 2px 8px rgba(0,0,0,0.03);line-height:1.8;font-size:0.88rem;color:#555">
+            <strong style="color:#1a237e">音素回文</strong>とは、音の最小単位（音素）に分解したとき、
+            前から読んでも後ろから読んでも同じ配列になる言葉です。<br><br>
+            探偵ナイトスクープで紹介された<strong style="color:#e65100">「オオエンマハンミョウ」</strong>は、
+            音素に分解すると <code style="background:#e8f5e9;padding:2px 6px;border-radius:4px;color:#2e7d32">
+            o o e m m a h a m m y o o</code> となり、
+            逆から読んでも同じ配列になります。<br><br>
+            毎週TVerで家族そろって番組を観ていた制作者が、この回に心を打たれ、
+            <strong style="color:#1a237e">「自分のプログラミング経験で貢献できる」</strong>と確信。
+            AIとプログラミングを駆使し、日本語辞書データ<strong>31万語以上</strong>を
+            音素解析して網羅的に探索した結果、<strong style="color:#e53935">351個</strong>の
+            音素回文を発見しました。
+        </div>
+        """, unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════
@@ -477,9 +659,10 @@ with tab1:
 # ═══════════════════════════════════════════════════════════
 with tab2:
     st.markdown(
-        f'<div class="section-heading">🎉 発見ワード一覧（{len(df_hits)} 件）</div>',
+        f'<div class="section-heading">発見ワード一覧（{len(df_hits)} 件）</div>',
         unsafe_allow_html=True,
     )
+    st.caption("ワードをクリックすると「音声検証」タブで再生できます")
 
     if len(df_hits) == 0:
         st.info("CSVファイルを配置するとここにワードが表示されます")
@@ -493,17 +676,20 @@ with tab2:
             for _, lrow in df_legendary.iterrows():
                 st.markdown(f"""
                 <div class="legendary-card">
-                    <span class="legendary-badge">👑 伝説 · 大発見!!</span>
+                    <span class="legendary-badge">👑 伝説</span>
                     <div class="legendary-word">{lrow['ワード']}</div>
                     <div style="font-family:'Share Tech Mono',monospace;font-size:0.85rem;
-                                color:#c0a060;margin-top:0.4rem">
+                                color:#bf360c;margin-top:0.4rem">
                         [ {lrow.get('音素', '')} ]
                     </div>
-                    <div style="font-size:0.75rem;color:#806040;margin-top:0.3rem">
-                        逆再生しても同じ音に聞こえる · 探偵ナイトスクープ提出候補
+                    <div style="font-size:0.75rem;color:#999;margin-top:0.3rem">
+                        探偵ナイトスクープが世に知らしめた音素回文の原点
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
+                if st.button(f"🎧 {lrow['ワード']} を音声検証", key=f"legend_{lrow['ワード']}"):
+                    st.session_state.selected_word_for_audio = lrow['ワード']
+                    st.rerun()
 
         # 通常ヒットをカテゴリ別に表示
         for pos in sorted(df_normal_hits["品詞"].unique().tolist()):
@@ -517,13 +703,16 @@ with tab2:
                 with cols[idx % 3]:
                     st.markdown(f"""
                     <div class="hit-card">
-                        <span class="hit-badge">発見!!</span>
+                        <span class="hit-badge">発見</span>
                         <div class="hit-word">{hrow['ワード']}</div>
                         <div class="hit-yomi">{hrow.get('ヨミガナ', '')}</div>
                         <div class="phoneme-row">[ {hrow.get('音素', '')} ]</div>
                         <div class="hit-meta">{hrow.get('品詞細分類', '')}</div>
                     </div>
                     """, unsafe_allow_html=True)
+                    if st.button(f"🎧 聴く", key=f"listen_{hrow['ワード']}"):
+                        st.session_state.selected_word_for_audio = hrow['ワード']
+                        st.rerun()
 
 
 # ═══════════════════════════════════════════════════════════
@@ -531,12 +720,12 @@ with tab2:
 # ═══════════════════════════════════════════════════════════
 with tab3:
     st.markdown(
-        f'<div class="section-heading">📋 全データ（{len(df_target):,} 件）</div>',
+        f'<div class="section-heading">全データ（{len(df_target):,} 件）</div>',
         unsafe_allow_html=True,
     )
 
     search = st.text_input(
-        "🔍 ワード検索",
+        "ワード検索",
         placeholder="キーワードを入力...",
         label_visibility="collapsed",
     )
@@ -545,9 +734,9 @@ with tab3:
 
     def highlight_hits(row):
         if str(row.get("品詞細分類", "")) == "伝説":
-            return ["background-color:#2a1a00;color:#f0d060;font-weight:bold"] * len(row)
+            return ["background-color:#fff8e1;color:#e65100;font-weight:bold"] * len(row)
         if row.get("回文判定") == "〇":
-            return ["background-color:#1a0a18;color:#f0e68c;font-weight:bold"] * len(row)
+            return ["background-color:#fce4ec;color:#c62828;font-weight:bold"] * len(row)
         return [""] * len(row)
 
     st.dataframe(
@@ -556,3 +745,14 @@ with tab3:
         use_container_width=True,
         height=600,
     )
+
+
+# ── フッター ─────────────────────────────────────────────
+st.markdown("""
+<div class="knight-footer">
+    毎週TVerで家族そろって観ていた探偵ナイトスクープ。<br>
+    「オオエンマハンミョウ」の回に感動し、AIとプログラミングで31万語を調査しました。<br>
+    いつか番組に関わりたいという夢が、このプロジェクトの原動力です。<br><br>
+    <span style="color:#1a237e;font-weight:500">探偵ナイトスクープ様、家族の笑顔をいつもありがとうございます。</span>
+</div>
+""", unsafe_allow_html=True)
