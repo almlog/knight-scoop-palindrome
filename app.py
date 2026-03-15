@@ -621,13 +621,13 @@ def render_fixed_player(tab_key):
             f'</div>',
             unsafe_allow_html=True,
         )
-        pc = st.session_state.play_count
-        st.audio(
-            normal_b if pm == "normal" else rev_b,
-            format="audio/mp3",
-            autoplay=True,
-            key=f"audio_{tab_key}_{pc}",
-        )
+        audio_container = st.container()
+        with audio_container:
+            st.audio(
+                normal_b if pm == "normal" else rev_b,
+                format="audio/mp3",
+                autoplay=True,
+            )
         if st.button("閉じる", key=f"close_player_{tab_key}"):
             st.session_state.play_word = None
             st.session_state.play_reading = None
