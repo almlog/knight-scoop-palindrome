@@ -417,10 +417,12 @@ df_miss = df_all[df_all["回文判定"] != "〇"].copy()
 # ── セッション状態の初期化 ──────────────────────────────────
 if "selected_word_for_audio" not in st.session_state:
     st.session_state.selected_word_for_audio = None
-if "active_tab" not in st.session_state:
-    st.session_state.active_tab = None
 if "show_message" not in st.session_state:
     st.session_state.show_message = True
+if "play_word" not in st.session_state:
+    st.session_state.play_word = None
+if "play_mode" not in st.session_state:
+    st.session_state.play_mode = None
 
 
 # ── ナイトスクープ愛バナー ──────────────────────────────────
@@ -647,7 +649,7 @@ with tab1:
                         padding:1.5rem;margin-top:1rem;text-align:center;
                         box-shadow:0 4px 16px rgba(255,143,0,0.1)">
                 <div style="font-size:2.5rem">👑</div>
-                <div style="font-family:'Zen Antique Soft',serif;font-size:1.4rem;
+                <div style="font-family:'Noto Serif JP',serif;font-size:1.4rem;
                             color:#e65100;margin:0.3rem 0">
                     伝説のワード
                 </div>
@@ -707,6 +709,41 @@ with tab2:
         df_legendary = df_hits[df_hits["品詞細分類"] == "伝説"]
         df_normal_hits = df_hits[df_hits["品詞細分類"] != "伝説"]
 
+        def play_audio_inline(word, mode, key_prefix):
+            """ワード再生ボタンを配置。押すとsession_stateに保存してrerun。"""
+            b1, b2 = st.columns(2)
+            with b1:
+                if st.button("▶ 通常", key=f"{key_prefix}_n_{word}"):
+                    st.session_state.play_word = word
+                    st.session_state.play_mode = "normal"
+                    st.rerun()
+            with b2:
+                if st.button("◀ 逆再生", key=f"{key_prefix}_r_{word}"):
+                    st.session_state.play_word = word
+                    st.session_state.play_mode = "reverse"
+                    st.rerun()
+
+        # 再生中のワードがあれば表示
+        if st.session_state.play_word:
+            pw = st.session_state.play_word
+            pm = st.session_state.play_mode
+            normal_b, rev_b = generate_audio(pw)
+            st.markdown(
+                f'<div style="background:#fff;border:1px solid #1a237e;border-radius:12px;'
+                f'padding:1rem 1.5rem;margin-bottom:1rem;text-align:center;'
+                f'box-shadow:0 2px 8px rgba(0,0,0,0.06)">'
+                f'<span style="font-family:\'Noto Serif JP\',serif;font-size:1.3rem;color:#1a237e;'
+                f'font-weight:700">{pw}</span>'
+                f'<span style="font-size:0.8rem;color:#888;margin-left:1rem">'
+                f'{"▶ 通常再生" if pm == "normal" else "◀ 逆再生"}</span></div>',
+                unsafe_allow_html=True,
+            )
+            st.audio(normal_b if pm == "normal" else rev_b, format="audio/mp3")
+            if st.button("再生を閉じる", key="close_player"):
+                st.session_state.play_word = None
+                st.session_state.play_mode = None
+                st.rerun()
+
         if not df_legendary.empty:
             st.markdown('<div class="section-heading">👑 伝説のワード</div>', unsafe_allow_html=True)
             for _, lrow in df_legendary.iterrows():
@@ -723,9 +760,7 @@ with tab2:
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-                if st.button(f"🎧 {lrow['ワード']} を音声検証", key=f"legend_{lrow['ワード']}"):
-                    st.session_state.selected_word_for_audio = lrow['ワード']
-                    st.rerun()
+                play_audio_inline(lrow['ワード'], None, "legend")
 
         # 通常ヒットをカテゴリ別に表示
         for pos in sorted(df_normal_hits["品詞"].unique().tolist()):
@@ -746,9 +781,7 @@ with tab2:
                         <div class="hit-meta">{hrow.get('品詞細分類', '')}</div>
                     </div>
                     """, unsafe_allow_html=True)
-                    if st.button(f"🎧 聴く", key=f"listen_{hrow['ワード']}"):
-                        st.session_state.selected_word_for_audio = hrow['ワード']
-                        st.rerun()
+                    play_audio_inline(hrow['ワード'], None, "hit")
 
 
 # ═══════════════════════════════════════════════════════════
