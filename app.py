@@ -16,7 +16,7 @@ st.set_page_config(
 # ── カスタムCSS（白基調・スタイリッシュ）─────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Zen+Antique+Soft&family=Noto+Sans+JP:wght@300;400;500;700;900&family=Share+Tech+Mono&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;700;900&family=Noto+Sans+JP:wght@300;400;500;700;900&family=Share+Tech+Mono&display=swap');
 
 html, body, [class*="css"] {
     font-family: 'Noto Sans JP', sans-serif;
@@ -42,54 +42,82 @@ header[data-testid="stHeader"] {
     background: transparent;
 }
 
-/* ── ナイトスクープ愛バナー ── */
-.knight-banner {
-    background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #3949ab 100%);
+/* ── ナイトスクープ愛バナー（スターウォーズ風クロール） ── */
+.knight-crawl-wrapper {
+    background: linear-gradient(180deg, #000000 0%, #05051a 40%, #0a0a2e 100%);
     border-radius: 16px;
-    padding: 2.5rem 2rem;
+    height: 420px;
     margin-bottom: 2rem;
-    text-align: center;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 8px 32px rgba(26, 35, 126, 0.15);
+    perspective: 300px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
-.knight-banner::before {
+/* 上部フェードアウト */
+.knight-crawl-wrapper::after {
     content: '';
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: radial-gradient(circle at 20% 50%, rgba(255,255,255,0.08) 0%, transparent 50%),
-                radial-gradient(circle at 80% 50%, rgba(255,255,255,0.05) 0%, transparent 50%);
+    top: 0; left: 0; right: 0;
+    height: 100%;
+    background: linear-gradient(
+        180deg,
+        rgba(0,0,0,0.9) 0%,
+        transparent 30%,
+        transparent 70%,
+        rgba(0,0,0,0.95) 100%
+    );
+    pointer-events: none;
+    z-index: 2;
 }
-.knight-banner-title {
-    font-family: 'Zen Antique Soft', serif;
-    font-size: 1.6rem;
-    color: #ffffff;
-    letter-spacing: 0.15em;
-    margin-bottom: 0.8rem;
-    position: relative;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+.knight-crawl-container {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    max-width: 600px;
+    transform-origin: 50% 100%;
+    animation: crawl 40s linear infinite;
 }
-.knight-banner-message {
-    font-family: 'Noto Sans JP', sans-serif;
-    font-size: 0.9rem;
-    color: rgba(255,255,255,0.85);
-    line-height: 1.9;
-    position: relative;
-    max-width: 700px;
-    margin: 0 auto;
+@keyframes crawl {
+    0% { top: 100%; }
+    100% { top: -250%; }
 }
-.knight-banner-footer {
-    font-family: 'Noto Sans JP', sans-serif;
-    font-size: 0.75rem;
-    color: rgba(255,255,255,0.5);
-    margin-top: 1.2rem;
-    position: relative;
-    letter-spacing: 0.08em;
+.knight-crawl-title {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 1.8rem;
+    color: #ffd54f;
+    letter-spacing: 0.2em;
+    text-align: center;
+    margin-bottom: 2rem;
+    font-weight: 700;
+    text-shadow: 0 0 20px rgba(255,213,79,0.4);
+}
+.knight-crawl-text {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 1.05rem;
+    color: #ffd54f;
+    line-height: 2.2;
+    text-align: justify;
+    letter-spacing: 0.06em;
+    font-weight: 500;
+}
+.knight-crawl-footer {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 0.85rem;
+    color: rgba(255,213,79,0.6);
+    text-align: center;
+    margin-top: 2.5rem;
+    letter-spacing: 0.12em;
+}
+/* ホバーで一時停止 */
+.knight-crawl-wrapper:hover .knight-crawl-container {
+    animation-play-state: paused;
 }
 
 /* ── メインタイトル ── */
 .main-title {
-    font-family: 'Zen Antique Soft', serif;
+    font-family: 'Noto Serif JP', serif;
     font-size: 2rem;
     color: #1a237e;
     letter-spacing: 0.06em;
@@ -175,7 +203,7 @@ header[data-testid="stHeader"] {
     letter-spacing: 0.1em;
 }
 .hit-word {
-    font-family: 'Zen Antique Soft', serif;
+    font-family: 'Noto Serif JP', serif;
     font-size: 1.5rem;
     color: #1a237e;
     font-weight: bold;
@@ -224,7 +252,7 @@ header[data-testid="stHeader"] {
     letter-spacing: 0.12em;
 }
 .legendary-word {
-    font-family: 'Zen Antique Soft', serif;
+    font-family: 'Noto Serif JP', serif;
     font-size: 2rem;
     color: #e65100;
     letter-spacing: 0.1em;
@@ -241,7 +269,7 @@ header[data-testid="stHeader"] {
     box-shadow: 0 4px 16px rgba(0,0,0,0.05);
 }
 .selected-word-main {
-    font-family: 'Zen Antique Soft', serif;
+    font-family: 'Noto Serif JP', serif;
     font-size: 2.8rem;
     letter-spacing: 0.12em;
     font-weight: 700;
@@ -400,23 +428,26 @@ if "active_tab" not in st.session_state:
 
 # ── ナイトスクープ愛バナー ──────────────────────────────────
 st.markdown("""
-<div class="knight-banner">
-    <div class="knight-banner-title">
-        探偵ナイトスクープ様へ
-    </div>
-    <div class="knight-banner-message">
-        毎週、家族そろってTVerで観るのが我が家の楽しみでした。<br>
-        いつか何かの形で、この大好きな番組に関われたら──<br>
-        そんな夢をずっと抱いていました。<br><br>
-        「逆から読んでも"オオエンマハンミョウ"」の回を観たとき、<br>
-        心の底から感動しました。<br>
-        <strong>「これならば、自分のプログラミングの経験が役に立てる」</strong>と確信し、<br>
-        AIとプログラミングを駆使して、日本語<strong>31万語以上</strong>の音素解析に挑みました。<br><br>
-        結果、<strong>351個</strong>の音素回文を発見。<br>
-        この成果を、番組への感謝と愛を込めてお届けします。
-    </div>
-    <div class="knight-banner-footer">
-        ── 探偵ナイトスクープを愛する一視聴者・一エンジニアより ──
+<div class="knight-crawl-wrapper">
+    <div class="knight-crawl-container">
+        <div class="knight-crawl-title">
+            探偵ナイトスクープ様へ
+        </div>
+        <div class="knight-crawl-text">
+            毎週、家族そろってTVerで観るのが我が家の楽しみでした。
+            いつか何かの形で、この大好きな番組に関われたら──
+            そんな夢をずっと抱いていました。<br><br>
+            「逆から読んでも"オオエンマハンミョウ"」の回を観たとき、
+            心の底から感動しました。<br><br>
+            「これならば、自分のプログラミングの経験が役に立てる」と確信し、
+            AIとプログラミングを駆使して、
+            日本語31万語以上の音素解析に挑みました。<br><br>
+            結果、351個の音素回文を発見。<br><br>
+            この成果を、番組への感謝と愛を込めてお届けします。
+        </div>
+        <div class="knight-crawl-footer">
+            ── 探偵ナイトスクープを愛する一視聴者・一エンジニアより ──
+        </div>
     </div>
 </div>
 """, unsafe_allow_html=True)
