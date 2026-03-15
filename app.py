@@ -678,20 +678,111 @@ def render_fixed_player(tab_key):
             st.rerun()
 
 
+# ── ワード検索（タブ外・常時表示）───────────────────────────
+search_query = st.text_input(
+    "🔍 ワード検索",
+    placeholder="キーワードを入力して全ワードから検索...",
+    label_visibility="collapsed",
+)
+
 # ── タブ ─────────────────────────────────────────────────
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "🎧 音声検証",
+    "📋 総調査ワード",
     "🟢 新発見ワード",
     "🟡 参考ワード",
     "📊 回文ヒット合計",
-    "📋 総調査ワード",
+    "🎧 音声検証",
 ])
 
 
 # ═══════════════════════════════════════════════════════════
-# Tab1: 音声検証
+# Tab1: 総調査ワード
 # ═══════════════════════════════════════════════════════════
 with tab1:
+    df_display = df_all.copy()
+    if search_query:
+        df_display = df_display[df_display["ワード"].str.contains(search_query, na=False)]
+        st.markdown(
+            f'<div class="section-heading">検索結果（{len(df_display):,} 件）</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            f'<div class="section-heading">全データ（{len(df_all):,} 件）</div>',
+            unsafe_allow_html=True,
+        )
+
+    def highlight_hits(row):
+        if str(row.get("品詞細分類", "")) == "伝説":
+            return ["background-color:#fff8e1;color:#e65100;font-weight:bold"] * len(row)
+        if row.get("回文判定") == "〇":
+            return ["background-color:#fce4ec;color:#c62828;font-weight:bold"] * len(row)
+        return [""] * len(row)
+
+    st.dataframe(
+        df_display[["品詞", "品詞細分類", "ワード", "ヨミガナ", "音素", "回文判定"]]
+        .style.apply(highlight_hits, axis=1),
+        use_container_width=True,
+        height=600,
+    )
+
+
+# ═══════════════════════════════════════════════════════════
+# Tab2: 新発見ワード（緑）
+# ═══════════════════════════════════════════════════════════
+with tab2:
+    st.markdown(
+        f'<div class="section-heading">🟢 新発見ワード（{len(df_hits_green)} 件）</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown("""
+    <div style="font-size:0.82rem;color:#666;margin-bottom:1rem">
+        独立した意味を持つ言葉として音素回文が成立するワード
+    </div>
+    """, unsafe_allow_html=True)
+    render_word_cards(df_hits_green, "green")
+    render_fixed_player("tab2")
+
+
+# ═══════════════════════════════════════════════════════════
+# Tab3: 参考ワード（黄）
+# ═══════════════════════════════════════════════════════════
+with tab3:
+    st.markdown(
+        f'<div class="section-heading">🟡 参考ワード（{len(df_hits_yellow)} 件）</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown("""
+    <div style="font-size:0.82rem;color:#666;margin-bottom:1rem">
+        動詞の活用形など、単体では意味が伝わりにくいワード（ファクトとして報告）
+    </div>
+    """, unsafe_allow_html=True)
+    render_word_cards(df_hits_yellow, "yellow")
+    render_fixed_player("tab3")
+
+
+# ═══════════════════════════════════════════════════════════
+# Tab4: 回文ヒット合計
+# ═══════════════════════════════════════════════════════════
+with tab4:
+    st.markdown(
+        f'<div class="section-heading">回文ヒット合計（{len(df_hits)} 件）</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown("""
+    <div style="font-size:0.82rem;color:#666;line-height:1.7;margin-bottom:1rem">
+        🟢 <strong>新発見ワード</strong>：独立した意味を持つ言葉<br>
+        🟡 <strong>参考ワード</strong>：動詞の活用形など
+    </div>
+    """, unsafe_allow_html=True)
+    render_word_cards(df_hits, "all", show_quality=True)
+    render_fixed_player("tab4")
+
+
+# ═══════════════════════════════════════════════════════════
+# Tab5: 音声検証
+# ═══════════════════════════════════════════════════════════
+with tab5:
     # ── ワード選択（回文ヒットのみ） ──
     word_options = df_hits["ワード"].tolist()
     if not word_options:
@@ -802,91 +893,6 @@ with tab1:
                     st.markdown(f'<div style="text-align:center;padding:4px"><span style="color:#2e7d32">✅</span><br><code>{f}</code></div>', unsafe_allow_html=True)
                 elif {f, r} in [{"e", "y"}, {"o", "u"}]:
                     st.markdown(f'<div style="text-align:center;padding:4px"><span style="color:#f57c00">🔁</span><br><code>{f}≈{r}</code></div>', unsafe_allow_html=True)
-
-
-# ═══════════════════════════════════════════════════════════
-# Tab2: 新発見ワード（緑）
-# ═══════════════════════════════════════════════════════════
-with tab2:
-    st.markdown(
-        f'<div class="section-heading">🟢 新発見ワード（{len(df_hits_green)} 件）</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown("""
-    <div style="font-size:0.82rem;color:#666;margin-bottom:1rem">
-        独立した意味を持つ言葉として音素回文が成立するワード
-    </div>
-    """, unsafe_allow_html=True)
-    render_word_cards(df_hits_green, "green")
-    render_fixed_player("tab2")
-
-
-# ═══════════════════════════════════════════════════════════
-# Tab3: 参考ワード（黄）
-# ═══════════════════════════════════════════════════════════
-with tab3:
-    st.markdown(
-        f'<div class="section-heading">🟡 参考ワード（{len(df_hits_yellow)} 件）</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown("""
-    <div style="font-size:0.82rem;color:#666;margin-bottom:1rem">
-        動詞の活用形など、単体では意味が伝わりにくいワード（ファクトとして報告）
-    </div>
-    """, unsafe_allow_html=True)
-    render_word_cards(df_hits_yellow, "yellow")
-    render_fixed_player("tab3")
-
-
-# ═══════════════════════════════════════════════════════════
-# Tab4: 回文ヒット合計
-# ═══════════════════════════════════════════════════════════
-with tab4:
-    st.markdown(
-        f'<div class="section-heading">回文ヒット合計（{len(df_hits)} 件）</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown("""
-    <div style="font-size:0.82rem;color:#666;line-height:1.7;margin-bottom:1rem">
-        🟢 <strong>新発見ワード</strong>：独立した意味を持つ言葉<br>
-        🟡 <strong>参考ワード</strong>：動詞の活用形など
-    </div>
-    """, unsafe_allow_html=True)
-    render_word_cards(df_hits, "all", show_quality=True)
-    render_fixed_player("tab4")
-
-
-# ═══════════════════════════════════════════════════════════
-# Tab5: 総調査ワード
-# ═══════════════════════════════════════════════════════════
-with tab5:
-    st.markdown(
-        f'<div class="section-heading">全データ（{len(df_all):,} 件）</div>',
-        unsafe_allow_html=True,
-    )
-
-    search = st.text_input(
-        "ワード検索",
-        placeholder="キーワードを入力...",
-        label_visibility="collapsed",
-    )
-    df_display = df_all.copy()
-    if search:
-        df_display = df_display[df_display["ワード"].str.contains(search, na=False)]
-
-    def highlight_hits(row):
-        if str(row.get("品詞細分類", "")) == "伝説":
-            return ["background-color:#fff8e1;color:#e65100;font-weight:bold"] * len(row)
-        if row.get("回文判定") == "〇":
-            return ["background-color:#fce4ec;color:#c62828;font-weight:bold"] * len(row)
-        return [""] * len(row)
-
-    st.dataframe(
-        df_display[["品詞", "品詞細分類", "ワード", "ヨミガナ", "音素", "回文判定"]]
-        .style.apply(highlight_hits, axis=1),
-        use_container_width=True,
-        height=600,
-    )
 
 
 # ── フッター ─────────────────────────────────────────────
