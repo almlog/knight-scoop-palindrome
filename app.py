@@ -698,6 +698,31 @@ with tab1:
         height=600,
     )
 
+    # ── ヒットワード再生セクション ──
+    df_display_hits = df_display[df_display["回文判定"] == "〇"]
+    if not df_display_hits.empty:
+        st.markdown(
+            f'<div class="section-heading">🔊 このカテゴリの回文ヒット（{len(df_display_hits)} 件）</div>',
+            unsafe_allow_html=True,
+        )
+        cols = st.columns(3)
+        for idx, (_, hrow) in enumerate(df_display_hits.iterrows()):
+            with cols[idx % 3]:
+                st.markdown(
+                    f'<div style="background:#fff;border:1px solid #e0e0e0;border-left:4px solid #e53935;'
+                    f'border-radius:8px;padding:0.8rem 1rem;margin:0.3rem 0">'
+                    f'<div style="font-family:\'Noto Serif JP\',serif;font-size:1.1rem;color:#1a237e;font-weight:700">{hrow["ワード"]}</div>'
+                    f'<div style="font-family:monospace;font-size:0.7rem;color:#888">{hrow.get("ヨミガナ", "")}　[ {hrow.get("音素", "")} ]</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+                play_audio_inline(
+                    hrow["ワード"],
+                    hrow.get("ヨミガナ", hrow["ワード"]),
+                    f"tab1_{idx}",
+                )
+        render_fixed_player("tab1")
+
 
 # ═══════════════════════════════════════════════════════════
 # Tab2: 新発見ワード（緑）
