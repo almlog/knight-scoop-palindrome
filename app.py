@@ -750,7 +750,6 @@ with tab1:
                         unsafe_allow_html=True,
                     )
 
-    render_fixed_player("tab1")
 
 
 # ═══════════════════════════════════════════════════════════
@@ -767,7 +766,6 @@ with tab2:
     </div>
     """, unsafe_allow_html=True)
     render_word_cards(df_hits_green, "green")
-    render_fixed_player("tab2")
 
 
 # ═══════════════════════════════════════════════════════════
@@ -784,7 +782,6 @@ with tab3:
     </div>
     """, unsafe_allow_html=True)
     render_word_cards(df_hits_yellow, "yellow")
-    render_fixed_player("tab3")
 
 
 # ═══════════════════════════════════════════════════════════
@@ -802,7 +799,6 @@ with tab4:
     </div>
     """, unsafe_allow_html=True)
     render_word_cards(df_hits, "all", show_quality=True)
-    render_fixed_player("tab4")
 
 
 # ═══════════════════════════════════════════════════════════
@@ -841,7 +837,6 @@ with tab5:
                     hrow.get("ヨミガナ", hrow["ワード"]),
                     f"review_{idx}",
                 )
-        render_fixed_player("tab5_review")
     else:
         st.info("要検証ワードはありません")
 
@@ -961,6 +956,9 @@ with tab6:
                 elif {f, r} in [{"e", "y"}, {"o", "u"}]:
                     st.markdown(f'<div style="text-align:center;padding:4px"><span style="color:#f57c00">🔁</span><br><code>{f}≈{r}</code></div>', unsafe_allow_html=True)
 
+
+# ── 固定プレイヤーバー（タブ外で1回だけ描画）──────────────────
+render_fixed_player("global")
 
 # ── フッター ─────────────────────────────────────────────
 st.markdown(f"""
