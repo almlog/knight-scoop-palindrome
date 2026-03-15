@@ -419,7 +419,7 @@ if "play_mode" not in st.session_state:
 
 # ── ナイトスクープ愛バナー ──────────────────────────────────
 if st.session_state.show_message:
-    st.markdown("""
+    st.markdown(f"""
     <div class="knight-crawl-wrapper">
         <div class="knight-crawl-container">
             <div class="knight-crawl-title">
@@ -433,8 +433,8 @@ if st.session_state.show_message:
                 心の底から感動しました。<br><br>
                 「これならば、自分のプログラミングの経験が役に立てる」と確信し、
                 AIとプログラミングを駆使して、
-                日本語31万語以上の音素解析に挑みました。<br><br>
-                結果、351個の音素回文を発見。<br><br>
+                日本語{len(df_all):,}語の音素解析に挑みました。<br><br>
+                結果、{len(df_hits):,}個の音素回文を発見。<br><br>
                 この成果を、番組への感謝と愛を込めてお届けします。
             </div>
             <div class="knight-crawl-footer">
@@ -857,10 +857,10 @@ with tab5:
 
 
 # ── フッター ─────────────────────────────────────────────
-st.markdown("""
+st.markdown(f"""
 <div class="knight-footer">
     毎週TVerで家族そろって観ていた探偵ナイトスクープ。<br>
-    「オオエンマハンミョウ」の回に感動し、AIとプログラミングで31万語を調査しました。<br>
+    「オオエンマハンミョウ」の回に感動し、AIとプログラミングで{len(df_all):,}語を調査しました。<br>
     いつか番組に関わりたいという夢が、このプロジェクトの原動力です。<br><br>
     <span style="color:#1a237e;font-weight:500">探偵ナイトスクープ様、家族の笑顔をいつもありがとうございます。</span>
 </div>
