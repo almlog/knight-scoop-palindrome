@@ -525,48 +525,18 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-# ── サイドバー ────────────────────────────────────────────
-st.sidebar.markdown("### 絞り込みフィルター")
+# ── サイドバー（情報表示のみ）─────────────────────────────────
+st.sidebar.markdown("### 📊 調査サマリー")
 
-st.sidebar.markdown("**回文判定**")
-判定フィルター = st.sidebar.radio(
-    label="判定",
-    options=["発見ワードのみ（〇）", "全件表示", "未該当のみ（×）"],
-    index=0,
-    label_visibility="collapsed",
+st.sidebar.markdown(
+    f'<div style="background:#f5f5f5;border-radius:10px;padding:1rem;margin-bottom:0.8rem">'
+    f'<div style="font-size:0.75rem;color:#999;letter-spacing:0.08em">総調査ワード</div>'
+    f'<div style="font-family:monospace;font-size:1.5rem;color:#1a237e;font-weight:700">{len(df_all):,}</div>'
+    f'</div>',
+    unsafe_allow_html=True,
 )
 
 st.sidebar.markdown("---")
-
-if 判定フィルター == "発見ワードのみ（〇）":
-    df_target = df_hits.copy()
-elif 判定フィルター == "未該当のみ（×）":
-    df_target = df_miss.copy()
-else:
-    df_target = df_all.copy()
-
-st.sidebar.markdown("**品詞カテゴリ**")
-all_pos = sorted(df_target["品詞"].dropna().unique().tolist())
-if "特別枠" in all_pos:
-    all_pos = ["特別枠"] + [p for p in all_pos if p != "特別枠"]
-selected_pos = st.sidebar.selectbox("品詞", ["すべて"] + all_pos)
-
-if selected_pos != "すべて":
-    df_target = df_target[df_target["品詞"] == selected_pos]
-
-all_sub = sorted(df_target["品詞細分類"].dropna().unique().tolist())
-selected_sub = st.sidebar.selectbox("品詞細分類", ["すべて"] + all_sub)
-
-if selected_sub != "すべて":
-    df_target = df_target[df_target["品詞細分類"] == selected_sub]
-
-# フィルターをタブ表示用データにも適用
-df_target_hits = df_target[df_target["回文判定"] == "〇"].copy()
-df_target_hits_green = df_target_hits[df_target_hits["品質"] == "green"]
-df_target_hits_yellow = df_target_hits[df_target_hits["品質"] == "yellow"]
-
-st.sidebar.markdown("---")
-
 st.sidebar.markdown("**回文ヒット内訳**")
 if len(df_hits) > 0:
     hit_by_pos = df_hits.groupby("品詞").size().sort_values(ascending=False)
@@ -578,12 +548,6 @@ if len(df_hits) > 0:
             f'</span>',
             unsafe_allow_html=True,
         )
-
-st.sidebar.markdown("---")
-st.sidebar.markdown(
-    f'<span style="font-size:0.75rem;color:#999">表示中: {len(df_target):,} 件</span>',
-    unsafe_allow_html=True,
-)
 
 
 # ── 音声生成 ──────────────────────────────────────────────
@@ -721,10 +685,10 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 # Tab1: 音声検証
 # ═══════════════════════════════════════════════════════════
 with tab1:
-    # ── ワード選択 ──
-    word_options = df_target["ワード"].tolist()
+    # ── ワード選択（回文ヒットのみ） ──
+    word_options = df_hits["ワード"].tolist()
     if not word_options:
-        st.warning("条件に合うワードがありません")
+        st.warning("回文ヒットワードがありません")
         st.stop()
 
     default_index = 0
@@ -738,7 +702,7 @@ with tab1:
         label_visibility="collapsed",
     )
 
-    row = df_target[df_target["ワード"] == selected_word].iloc[0]
+    row = df_hits[df_hits["ワード"] == selected_word].iloc[0]
     is_hit = row["回文判定"] == "〇"
     is_legendary = str(row.get("品詞細分類", "")) == "伝説"
     phonemes = str(row.get("音素", "")).split()
@@ -837,7 +801,7 @@ with tab1:
 # ═══════════════════════════════════════════════════════════
 with tab2:
     st.markdown(
-        f'<div class="section-heading">🟢 新発見ワード（{len(df_target_hits_green)} 件）</div>',
+        f'<div class="section-heading">🟢 新発見ワード（{len(df_hits_green)} 件）</div>',
         unsafe_allow_html=True,
     )
     st.markdown("""
@@ -845,7 +809,7 @@ with tab2:
         独立した意味を持つ言葉として音素回文が成立するワード
     </div>
     """, unsafe_allow_html=True)
-    render_word_cards(df_target_hits_green, "green")
+    render_word_cards(df_hits_green, "green")
     render_fixed_player("tab2")
 
 
@@ -854,7 +818,7 @@ with tab2:
 # ═══════════════════════════════════════════════════════════
 with tab3:
     st.markdown(
-        f'<div class="section-heading">🟡 参考ワード（{len(df_target_hits_yellow)} 件）</div>',
+        f'<div class="section-heading">🟡 参考ワード（{len(df_hits_yellow)} 件）</div>',
         unsafe_allow_html=True,
     )
     st.markdown("""
@@ -862,7 +826,7 @@ with tab3:
         動詞の活用形など、単体では意味が伝わりにくいワード（ファクトとして報告）
     </div>
     """, unsafe_allow_html=True)
-    render_word_cards(df_target_hits_yellow, "yellow")
+    render_word_cards(df_hits_yellow, "yellow")
     render_fixed_player("tab3")
 
 
@@ -871,7 +835,7 @@ with tab3:
 # ═══════════════════════════════════════════════════════════
 with tab4:
     st.markdown(
-        f'<div class="section-heading">回文ヒット合計（{len(df_target_hits)} 件）</div>',
+        f'<div class="section-heading">回文ヒット合計（{len(df_hits)} 件）</div>',
         unsafe_allow_html=True,
     )
     st.markdown("""
@@ -880,7 +844,7 @@ with tab4:
         🟡 <strong>参考ワード</strong>：動詞の活用形など
     </div>
     """, unsafe_allow_html=True)
-    render_word_cards(df_target_hits, "all", show_quality=True)
+    render_word_cards(df_hits, "all", show_quality=True)
     render_fixed_player("tab4")
 
 
@@ -889,7 +853,7 @@ with tab4:
 # ═══════════════════════════════════════════════════════════
 with tab5:
     st.markdown(
-        f'<div class="section-heading">全データ（{len(df_target):,} 件）</div>',
+        f'<div class="section-heading">全データ（{len(df_all):,} 件）</div>',
         unsafe_allow_html=True,
     )
 
@@ -898,8 +862,9 @@ with tab5:
         placeholder="キーワードを入力...",
         label_visibility="collapsed",
     )
+    df_display = df_all.copy()
     if search:
-        df_target = df_target[df_target["ワード"].str.contains(search, na=False)]
+        df_display = df_display[df_display["ワード"].str.contains(search, na=False)]
 
     def highlight_hits(row):
         if str(row.get("品詞細分類", "")) == "伝説":
@@ -909,7 +874,7 @@ with tab5:
         return [""] * len(row)
 
     st.dataframe(
-        df_target[["品詞", "品詞細分類", "ワード", "ヨミガナ", "音素", "回文判定"]]
+        df_display[["品詞", "品詞細分類", "ワード", "ヨミガナ", "音素", "回文判定"]]
         .style.apply(highlight_hits, axis=1),
         use_container_width=True,
         height=600,
