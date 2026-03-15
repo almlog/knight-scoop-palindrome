@@ -77,11 +77,11 @@ header[data-testid="stHeader"] {
     width: 80%;
     max-width: 600px;
     transform-origin: 50% 100%;
-    animation: crawl 40s linear infinite;
+    animation: crawl 25s linear infinite;
 }
 @keyframes crawl {
     0% { top: 100%; }
-    100% { top: -250%; }
+    100% { top: -180%; }
 }
 .knight-crawl-title {
     font-family: 'Noto Serif JP', serif;
@@ -110,11 +110,6 @@ header[data-testid="stHeader"] {
     margin-top: 2.5rem;
     letter-spacing: 0.12em;
 }
-/* ホバーで一時停止 */
-.knight-crawl-wrapper:hover .knight-crawl-container {
-    animation-play-state: paused;
-}
-
 /* ── メインタイトル ── */
 .main-title {
     font-family: 'Noto Serif JP', serif;
@@ -427,30 +422,31 @@ if "active_tab" not in st.session_state:
 
 
 # ── ナイトスクープ愛バナー ──────────────────────────────────
-st.markdown("""
-<div class="knight-crawl-wrapper">
-    <div class="knight-crawl-container">
-        <div class="knight-crawl-title">
-            探偵ナイトスクープ様へ
-        </div>
-        <div class="knight-crawl-text">
-            毎週、家族そろってTVerで観るのが我が家の楽しみでした。
-            いつか何かの形で、この大好きな番組に関われたら──
-            そんな夢をずっと抱いていました。<br><br>
-            「逆から読んでも"オオエンマハンミョウ"」の回を観たとき、
-            心の底から感動しました。<br><br>
-            「これならば、自分のプログラミングの経験が役に立てる」と確信し、
-            AIとプログラミングを駆使して、
-            日本語31万語以上の音素解析に挑みました。<br><br>
-            結果、351個の音素回文を発見。<br><br>
-            この成果を、番組への感謝と愛を込めてお届けします。
-        </div>
-        <div class="knight-crawl-footer">
-            ── 探偵ナイトスクープを愛する一視聴者・一エンジニアより ──
+with st.expander("探偵ナイトスクープ様へ ── メッセージを読む", expanded=True):
+    st.markdown("""
+    <div class="knight-crawl-wrapper">
+        <div class="knight-crawl-container">
+            <div class="knight-crawl-title">
+                探偵ナイトスクープ様へ
+            </div>
+            <div class="knight-crawl-text">
+                毎週、家族そろってTVerで観るのが我が家の楽しみでした。
+                いつか何かの形で、この大好きな番組に関われたら──
+                そんな夢をずっと抱いていました。<br><br>
+                「逆から読んでも"オオエンマハンミョウ"」の回を観たとき、
+                心の底から感動しました。<br><br>
+                「これならば、自分のプログラミングの経験が役に立てる」と確信し、
+                AIとプログラミングを駆使して、
+                日本語31万語以上の音素解析に挑みました。<br><br>
+                結果、351個の音素回文を発見。<br><br>
+                この成果を、番組への感謝と愛を込めてお届けします。
+            </div>
+            <div class="knight-crawl-footer">
+                ── 探偵ナイトスクープを愛する一視聴者・一エンジニアより ──
+            </div>
         </div>
     </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 
 # ── ヘッダー ──────────────────────────────────────────────
