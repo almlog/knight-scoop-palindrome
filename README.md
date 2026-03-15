@@ -66,3 +66,5 @@ streamlit run app.py
 ---
 
 *探偵ナイトスクープ様、家族の笑顔をいつもありがとうございます。*
+
+📺 [探偵!ナイトスクープ（ABCテレビ）](https://www.asahi.co.jp/knight-scoop/)
