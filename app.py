@@ -407,10 +407,10 @@ header[data-testid="stHeader"] {
 def _load_all():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     df, errors = load_data(base_dir)
-    df_all, df_hits, df_hits_green, df_hits_yellow, df_miss = prepare_datasets(df)
-    return df_all, df_hits, df_hits_green, df_hits_yellow, df_miss, errors
+    df_all, df_hits, df_hits_green, df_hits_yellow, df_miss, df_needs_review = prepare_datasets(df)
+    return df_all, df_hits, df_hits_green, df_hits_yellow, df_miss, df_needs_review, errors
 
-df_all, df_hits, df_hits_green, df_hits_yellow, df_miss, _load_errors = _load_all()
+df_all, df_hits, df_hits_green, df_hits_yellow, df_miss, df_needs_review, _load_errors = _load_all()
 for fname, err in _load_errors:
     st.sidebar.warning(f"⚠ {fname}: {err}")
 
@@ -636,11 +636,12 @@ def render_fixed_player(tab_key):
 
 
 # ── タブ ─────────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📋 総調査ワード",
     "🟢 新発見ワード",
     "🟡 参考ワード",
     "📊 回文ヒット合計",
+    f"🔍 要検証（{len(df_needs_review)}）",
     "🎧 音声検証",
 ])
 
@@ -805,9 +806,50 @@ with tab4:
 
 
 # ═══════════════════════════════════════════════════════════
-# Tab5: 音声検証
+# Tab5: 要検証
 # ═══════════════════════════════════════════════════════════
 with tab5:
+    st.markdown(
+        f'<div class="section-heading">🔍 要検証ワード（{len(df_needs_review)} 件）</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown("""
+    <div style="font-size:0.82rem;color:#666;margin-bottom:1rem">
+        音素の並びが厳密な回文ではないが、元データで回文判定〇とされたワード。<br>
+        逆再生を聴いて、同じ音に聞こえるか確認してください。
+    </div>
+    """, unsafe_allow_html=True)
+    if not df_needs_review.empty:
+        cols = st.columns(3)
+        for idx, (_, hrow) in enumerate(df_needs_review.iterrows()):
+            phonemes = hrow.get("音素", "").strip().split()
+            phonemes_rev = phonemes[::-1]
+            with cols[idx % 3]:
+                st.markdown(
+                    f'<div class="hit-card" style="border-left-color:#ff9800">'
+                    f'<span class="hit-badge" style="background:#ff9800;color:#fff">🔍 要検証</span>'
+                    f'<div class="hit-word">{hrow["ワード"]}</div>'
+                    f'<div class="hit-yomi">{hrow.get("ヨミガナ", "")}</div>'
+                    f'<div class="phoneme-row">順: [ {" ".join(phonemes)} ]</div>'
+                    f'<div class="phoneme-row" style="color:#e53935">逆: [ {" ".join(phonemes_rev)} ]</div>'
+                    f'<div class="hit-meta">{hrow.get("品詞", "")} / {hrow.get("品詞細分類", "")}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+                play_audio_inline(
+                    hrow["ワード"],
+                    hrow.get("ヨミガナ", hrow["ワード"]),
+                    f"review_{idx}",
+                )
+        render_fixed_player("tab5_review")
+    else:
+        st.info("要検証ワードはありません")
+
+
+# ═══════════════════════════════════════════════════════════
+# Tab6: 音声検証
+# ═══════════════════════════════════════════════════════════
+with tab6:
     # ── ワード選択（回文ヒットのみ） ──
     word_options = df_hits["ワード"].tolist()
     if not word_options:

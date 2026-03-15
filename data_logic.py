@@ -78,6 +78,15 @@ def load_data(base_dir):
     return df, errors
 
 
+# ── 回文検証 ──────────────────────────────────────────────
+def is_strict_palindrome(phonemes_str):
+    """音素列が厳密に回文かどうかを判定。"""
+    if not isinstance(phonemes_str, str) or not phonemes_str.strip():
+        return False
+    p = phonemes_str.strip().split()
+    return p == p[::-1]
+
+
 # ── 品質分類 ──────────────────────────────────────────────
 def classify_word(row):
     """ワードを green(新発見) / yellow(参考) に分類。"""
@@ -86,15 +95,26 @@ def classify_word(row):
     return "green"
 
 
+def _classify_verification(row):
+    """回文判定〇のワードを厳密検証し、確認済み/要検証を返す。"""
+    if row.get("回文判定") != "〇":
+        return ""
+    if is_strict_palindrome(row.get("音素", "")):
+        return "確認済み"
+    return "要検証"
+
+
 def prepare_datasets(df_all):
-    """全データから hits / green / yellow / miss を分割。"""
+    """全データから hits / green / yellow / miss を分割。検証カラム付き。"""
     df_all = df_all.copy()
     df_all["品質"] = df_all.apply(classify_word, axis=1)
-    df_hits = df_all[df_all["回文判定"] == "〇"].copy()
+    df_all["検証"] = df_all.apply(_classify_verification, axis=1)
+    df_hits = df_all[(df_all["回文判定"] == "〇") & (df_all["検証"] == "確認済み")].copy()
     df_hits_green = df_hits[df_hits["品質"] == "green"]
     df_hits_yellow = df_hits[df_hits["品質"] == "yellow"]
     df_miss = df_all[df_all["回文判定"] != "〇"].copy()
-    return df_all, df_hits, df_hits_green, df_hits_yellow, df_miss
+    df_needs_review = df_all[df_all["検証"] == "要検証"].copy()
+    return df_all, df_hits, df_hits_green, df_hits_yellow, df_miss, df_needs_review
 
 
 # ── 音声生成 ──────────────────────────────────────────────
