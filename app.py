@@ -1,9 +1,6 @@
 import os
-import io
 import streamlit as st
-import pandas as pd
-from gtts import gTTS
-from pydub import AudioSegment
+from data_logic import load_data, prepare_datasets, generate_audio_bytes
 
 # ── ページ設定 ─────────────────────────────────────────────
 st.set_page_config(
@@ -396,70 +393,15 @@ header[data-testid="stHeader"] {
 
 # ── データ読み込み ─────────────────────────────────────────
 @st.cache_data
-def load_data():
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    dfs = []
+def _load_all():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    df, errors = load_data(base_dir)
+    df_all, df_hits, df_hits_green, df_hits_yellow, df_miss = prepare_datasets(df)
+    return df_all, df_hits, df_hits_green, df_hits_yellow, df_miss, errors
 
-    for fname in [
-        "knight_scoop_all_keywords_investigation.csv",
-        "animals_palindrome_v4.csv",
-        "inat_palindrome_v5.csv",
-    ]:
-        fpath = os.path.join(BASE_DIR, fname)
-        try:
-            df = pd.read_csv(fpath, encoding="utf-8-sig")
-            if df.empty or not {"ワード", "回文判定"}.issubset(df.columns):
-                continue
-            dfs.append(df)
-        except FileNotFoundError:
-            continue
-        except Exception as e:
-            st.sidebar.warning(f"⚠ {fname}: {e}")
-            continue
-
-    if dfs:
-        df_all = pd.concat(dfs, ignore_index=True).drop_duplicates(subset="ワード")
-    else:
-        df_all = pd.DataFrame(columns=["品詞", "品詞細分類", "ワード", "ヨミガナ", "音素", "回文判定"])
-
-    legendary = [
-        {
-            "品詞": "特別枠",
-            "品詞細分類": "伝説",
-            "ワード": "オオエンマハンミョウ",
-            "ヨミガナ": "オオエンマハンミョウ",
-            "音素": "o o e m m a h a m m y o o",
-            "回文判定": "〇",
-        },
-    ]
-    existing = set(df_all["ワード"].tolist())
-    new_rows = [lw for lw in legendary if lw["ワード"] not in existing]
-    if new_rows:
-        df_all = pd.concat([pd.DataFrame(new_rows), df_all], ignore_index=True)
-
-    for col in ["品詞", "品詞細分類", "ワード", "ヨミガナ", "音素", "回文判定"]:
-        if col not in df_all.columns:
-            df_all[col] = ""
-
-    return df_all
-
-
-df_all = load_data()
-
-# ── ワード品質分類 ──────────────────────────────────────────
-# 緑: 一般的な意味合いがつくワード（新発見としてカウント）
-# 黄: 活用形など、その一言のみでは意味が伝わりにくいワード（付属品）
-def classify_word(row):
-    if row.get("品詞") == "動詞" and row.get("品詞細分類") == "一般":
-        return "yellow"
-    return "green"
-
-df_all["品質"] = df_all.apply(classify_word, axis=1)
-
-df_hits = df_all[df_all["回文判定"] == "〇"].copy()
-df_hits_green = df_hits[df_hits["品質"] == "green"]
-df_hits_yellow = df_hits[df_hits["品質"] == "yellow"]
-df_miss = df_all[df_all["回文判定"] != "〇"].copy()
+df_all, df_hits, df_hits_green, df_hits_yellow, df_miss, _load_errors = _load_all()
+for fname, err in _load_errors:
+    st.sidebar.warning(f"⚠ {fname}: {err}")
 
 
 # ── セッション状態の初期化 ──────────────────────────────────
@@ -563,17 +505,7 @@ if len(df_hits) > 0:
 # ── 音声生成 ──────────────────────────────────────────────
 @st.cache_data
 def generate_audio(reading):
-    tts = gTTS(text=reading, lang="ja")
-    mp3_fp = io.BytesIO()
-    tts.write_to_fp(mp3_fp)
-    mp3_fp.seek(0)
-    audio = AudioSegment.from_file(mp3_fp, format="mp3")
-    reversed_audio = audio.reverse()
-    rev_fp = io.BytesIO()
-    reversed_audio.export(rev_fp, format="mp3")
-    rev_fp.seek(0)
-    mp3_fp.seek(0)
-    return mp3_fp.read(), rev_fp.read()
+    return generate_audio_bytes(reading)
 
 
 # ── 共通: カード再生関数 ────────────────────────────────────
