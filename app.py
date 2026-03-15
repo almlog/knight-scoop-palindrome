@@ -419,10 +419,12 @@ if "selected_word_for_audio" not in st.session_state:
     st.session_state.selected_word_for_audio = None
 if "active_tab" not in st.session_state:
     st.session_state.active_tab = None
+if "show_message" not in st.session_state:
+    st.session_state.show_message = True
 
 
 # ── ナイトスクープ愛バナー ──────────────────────────────────
-with st.expander("探偵ナイトスクープ様へ ── メッセージを読む", expanded=True):
+if st.session_state.show_message:
     st.markdown("""
     <div class="knight-crawl-wrapper">
         <div class="knight-crawl-container">
@@ -447,6 +449,13 @@ with st.expander("探偵ナイトスクープ様へ ── メッセージを読
         </div>
     </div>
     """, unsafe_allow_html=True)
+    if st.button("閉じる", key="close_msg"):
+        st.session_state.show_message = False
+        st.rerun()
+else:
+    if st.button("メッセージを読む", key="open_msg"):
+        st.session_state.show_message = True
+        st.rerun()
 
 
 # ── ヘッダー ──────────────────────────────────────────────
