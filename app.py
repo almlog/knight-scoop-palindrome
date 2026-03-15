@@ -387,6 +387,17 @@ header[data-testid="stHeader"] {
     background: #1a237e !important;
     color: #fff !important;
 }
+
+/* ── ラジオボタン（カテゴリフィルター）文字色修正 ── */
+[data-testid="stRadio"] label {
+    color: #333 !important;
+}
+[data-testid="stRadio"] [data-baseweb="radio"] {
+    color: #333 !important;
+}
+[data-testid="stRadio"] p {
+    color: #333 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
