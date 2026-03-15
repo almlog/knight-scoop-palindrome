@@ -322,6 +322,33 @@ header[data-testid="stHeader"] {
     letter-spacing: 0.08em;
 }
 
+/* ── 固定プレイヤーバー ── */
+.fixed-player-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border-top: 2px solid #1a237e;
+    padding: 0.8rem 2rem;
+    z-index: 9999;
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+}
+.fixed-player-word {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 1.1rem;
+    color: #1a237e;
+    font-weight: 700;
+}
+.fixed-player-mode {
+    font-size: 0.75rem;
+    color: #888;
+}
+
 /* ── ボタンスタイル ── */
 .stButton > button {
     background: #ffffff;
@@ -710,8 +737,7 @@ with tab2:
         df_normal_hits = df_hits[df_hits["品詞細分類"] != "伝説"]
 
         def play_audio_inline(word, key_prefix):
-            """ボタン押下で即座に音声再生。"""
-            is_playing = st.session_state.play_word == word
+            """ボタン押下で即座に音声再生（固定バーで再生）。"""
             b1, b2 = st.columns(2)
             with b1:
                 if st.button("▶ 通常", key=f"{key_prefix}_n_{word}"):
@@ -723,13 +749,6 @@ with tab2:
                     st.session_state.play_word = word
                     st.session_state.play_mode = "reverse"
                     st.rerun()
-            if is_playing:
-                normal_b, rev_b = generate_audio(word)
-                st.audio(
-                    normal_b if st.session_state.play_mode == "normal" else rev_b,
-                    format="audio/mp3",
-                    autoplay=True,
-                )
 
         if not df_legendary.empty:
             st.markdown('<div class="section-heading">👑 伝説のワード</div>', unsafe_allow_html=True)
@@ -769,6 +788,29 @@ with tab2:
                     </div>
                     """, unsafe_allow_html=True)
                     play_audio_inline(hrow['ワード'], "hit")
+
+    # 固定プレイヤーバー（再生中のワードがあれば表示）
+    if st.session_state.play_word:
+        pw = st.session_state.play_word
+        pm = st.session_state.play_mode
+        normal_b, rev_b = generate_audio(pw)
+        mode_label = "▶ 通常再生" if pm == "normal" else "◀ 逆再生"
+        st.markdown(
+            f'<div class="fixed-player-bar">'
+            f'<span class="fixed-player-word">{pw}</span>'
+            f'<span class="fixed-player-mode">{mode_label}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        st.audio(
+            normal_b if pm == "normal" else rev_b,
+            format="audio/mp3",
+            autoplay=True,
+        )
+        if st.button("閉じる", key="close_player"):
+            st.session_state.play_word = None
+            st.session_state.play_mode = None
+            st.rerun()
 
 
 # ═══════════════════════════════════════════════════════════
