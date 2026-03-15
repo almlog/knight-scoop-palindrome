@@ -560,6 +560,11 @@ selected_sub = st.sidebar.selectbox("品詞細分類", ["すべて"] + all_sub)
 if selected_sub != "すべて":
     df_target = df_target[df_target["品詞細分類"] == selected_sub]
 
+# フィルターをタブ表示用データにも適用
+df_target_hits = df_target[df_target["回文判定"] == "〇"].copy()
+df_target_hits_green = df_target_hits[df_target_hits["品質"] == "green"]
+df_target_hits_yellow = df_target_hits[df_target_hits["品質"] == "yellow"]
+
 st.sidebar.markdown("---")
 
 st.sidebar.markdown("**回文ヒット内訳**")
@@ -598,16 +603,16 @@ def generate_audio(word):
 
 
 # ── 共通: カード再生関数 ────────────────────────────────────
-def play_audio_inline(word, key_prefix):
+def play_audio_inline(word, key_suffix):
     """ボタン押下で即座に音声再生（固定バーで再生）。"""
     b1, b2 = st.columns(2)
     with b1:
-        if st.button("▶ 通常", key=f"{key_prefix}_n_{word}"):
+        if st.button("▶ 通常", key=f"n_{key_suffix}"):
             st.session_state.play_word = word
             st.session_state.play_mode = "normal"
             st.rerun()
     with b2:
-        if st.button("◀ 逆再生", key=f"{key_prefix}_r_{word}"):
+        if st.button("◀ 逆再生", key=f"r_{key_suffix}"):
             st.session_state.play_word = word
             st.session_state.play_mode = "reverse"
             st.rerun()
@@ -625,7 +630,7 @@ def render_word_cards(df_words, key_prefix, show_quality=False):
 
     if not df_leg.empty:
         st.markdown('<div class="section-heading">👑 伝説のワード</div>', unsafe_allow_html=True)
-        for _, lrow in df_leg.iterrows():
+        for leg_idx, (_, lrow) in enumerate(df_leg.iterrows()):
             st.markdown(f"""
             <div class="legendary-card">
                 <span class="legendary-badge">👑 伝説</span>
@@ -639,7 +644,7 @@ def render_word_cards(df_words, key_prefix, show_quality=False):
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            play_audio_inline(lrow['ワード'], f"{key_prefix}_leg")
+            play_audio_inline(lrow['ワード'], f"{key_prefix}_leg_{leg_idx}")
 
     for pos in sorted(df_normal["品詞"].unique().tolist()):
         df_pos = df_normal[df_normal["品詞"] == pos]
@@ -670,15 +675,16 @@ def render_word_cards(df_words, key_prefix, show_quality=False):
                     <div class="hit-meta">{hrow.get('品詞細分類', '')}</div>
                 </div>
                 """, unsafe_allow_html=True)
-                play_audio_inline(hrow['ワード'], f"{key_prefix}_{pos}")
+                play_audio_inline(hrow['ワード'], f"{key_prefix}_{pos}_{idx}")
 
 
-def render_fixed_player():
+def render_fixed_player(tab_key):
     """固定プレイヤーバー（再生中のワードがあれば表示）。"""
     if st.session_state.play_word:
         pw = st.session_state.play_word
         pm = st.session_state.play_mode
-        normal_b, rev_b = generate_audio(pw)
+        with st.spinner(f"「{pw}」の音声を生成中..."):
+            normal_b, rev_b = generate_audio(pw)
         mode_label = "▶ 通常再生" if pm == "normal" else "◀ 逆再生"
         st.markdown(
             f'<div class="fixed-player-bar">'
@@ -692,7 +698,7 @@ def render_fixed_player():
             format="audio/mp3",
             autoplay=True,
         )
-        if st.button("閉じる", key="close_player"):
+        if st.button("閉じる", key=f"close_player_{tab_key}"):
             st.session_state.play_word = None
             st.session_state.play_mode = None
             st.rerun()
@@ -764,7 +770,7 @@ with tab1:
     """, unsafe_allow_html=True)
 
     # ── 音声プレイヤー ──
-    with st.spinner("音声を生成中..."):
+    with st.spinner(f"「{selected_word}」の音声を生成中..."):
         normal_bytes, reverse_bytes = generate_audio(selected_word)
 
     a1, a2 = st.columns(2)
@@ -828,7 +834,7 @@ with tab1:
 # ═══════════════════════════════════════════════════════════
 with tab2:
     st.markdown(
-        f'<div class="section-heading">🟢 新発見ワード（{len(df_hits_green)} 件）</div>',
+        f'<div class="section-heading">🟢 新発見ワード（{len(df_target_hits_green)} 件）</div>',
         unsafe_allow_html=True,
     )
     st.markdown("""
@@ -836,8 +842,8 @@ with tab2:
         独立した意味を持つ言葉として音素回文が成立するワード
     </div>
     """, unsafe_allow_html=True)
-    render_word_cards(df_hits_green, "green")
-    render_fixed_player()
+    render_word_cards(df_target_hits_green, "green")
+    render_fixed_player("tab2")
 
 
 # ═══════════════════════════════════════════════════════════
@@ -845,7 +851,7 @@ with tab2:
 # ═══════════════════════════════════════════════════════════
 with tab3:
     st.markdown(
-        f'<div class="section-heading">🟡 参考ワード（{len(df_hits_yellow)} 件）</div>',
+        f'<div class="section-heading">🟡 参考ワード（{len(df_target_hits_yellow)} 件）</div>',
         unsafe_allow_html=True,
     )
     st.markdown("""
@@ -853,8 +859,8 @@ with tab3:
         動詞の活用形など、単体では意味が伝わりにくいワード（ファクトとして報告）
     </div>
     """, unsafe_allow_html=True)
-    render_word_cards(df_hits_yellow, "yellow")
-    render_fixed_player()
+    render_word_cards(df_target_hits_yellow, "yellow")
+    render_fixed_player("tab3")
 
 
 # ═══════════════════════════════════════════════════════════
@@ -862,7 +868,7 @@ with tab3:
 # ═══════════════════════════════════════════════════════════
 with tab4:
     st.markdown(
-        f'<div class="section-heading">回文ヒット合計（{len(df_hits)} 件）</div>',
+        f'<div class="section-heading">回文ヒット合計（{len(df_target_hits)} 件）</div>',
         unsafe_allow_html=True,
     )
     st.markdown("""
@@ -871,8 +877,8 @@ with tab4:
         🟡 <strong>参考ワード</strong>：動詞の活用形など
     </div>
     """, unsafe_allow_html=True)
-    render_word_cards(df_hits, "all", show_quality=True)
-    render_fixed_player()
+    render_word_cards(df_target_hits, "all", show_quality=True)
+    render_fixed_player("tab4")
 
 
 # ═══════════════════════════════════════════════════════════
