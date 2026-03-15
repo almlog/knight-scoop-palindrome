@@ -437,7 +437,20 @@ def load_data():
 
 
 df_all = load_data()
+
+# ── ワード品質分類 ──────────────────────────────────────────
+# 緑: 一般的な意味合いがつくワード（新発見としてカウント）
+# 黄: 活用形など、その一言のみでは意味が伝わりにくいワード（付属品）
+def classify_word(row):
+    if row.get("品詞") == "動詞" and row.get("品詞細分類") == "一般":
+        return "yellow"
+    return "green"
+
+df_all["品質"] = df_all.apply(classify_word, axis=1)
+
 df_hits = df_all[df_all["回文判定"] == "〇"].copy()
+df_hits_green = df_hits[df_hits["品質"] == "green"]
+df_hits_yellow = df_hits[df_hits["品質"] == "yellow"]
 df_miss = df_all[df_all["回文判定"] != "〇"].copy()
 
 
@@ -491,19 +504,25 @@ else:
 st.markdown('<div class="main-title">音素回文発見プロジェクト</div>', unsafe_allow_html=True)
 st.markdown('<div class="sub-title">Phonemic Palindrome Discovery System</div>', unsafe_allow_html=True)
 
-c1, c2, c3, c4 = st.columns(4)
+c1, c2, c3, c4, c5 = st.columns(5)
 with c1:
     st.markdown(f'<div class="stat-box"><div class="stat-num">{len(df_all):,}</div><div class="stat-label">総調査ワード</div></div>', unsafe_allow_html=True)
 with c2:
-    st.markdown(f'<div class="stat-box"><div class="stat-num" style="color:#e53935">{len(df_hits):,}</div><div class="stat-label">回文ヒット</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="stat-box"><div class="stat-num" style="color:#2e7d32">{len(df_hits_green):,}</div><div class="stat-label">🟢 新発見ワード</div></div>', unsafe_allow_html=True)
 with c3:
+    st.markdown(f'<div class="stat-box"><div class="stat-num" style="color:#f9a825">{len(df_hits_yellow):,}</div><div class="stat-label">🟡 参考ワード</div></div>', unsafe_allow_html=True)
+with c4:
+    st.markdown(f'<div class="stat-box"><div class="stat-num" style="color:#e53935">{len(df_hits):,}</div><div class="stat-label">回文ヒット合計</div></div>', unsafe_allow_html=True)
+with c5:
     rate = len(df_hits) / len(df_all) * 100 if len(df_all) > 0 else 0
     st.markdown(f'<div class="stat-box"><div class="stat-num">{rate:.2f}%</div><div class="stat-label">ヒット率</div></div>', unsafe_allow_html=True)
-with c4:
-    cats = df_hits["品詞"].nunique()
-    st.markdown(f'<div class="stat-box"><div class="stat-num">{cats}</div><div class="stat-label">カテゴリ数</div></div>', unsafe_allow_html=True)
 
-st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("""
+<div style="display:flex;gap:2rem;justify-content:center;margin:0.8rem 0 1.5rem;font-size:0.8rem;color:#666">
+    <span>🟢 <strong>新発見ワード</strong>：意味が通じる独立した言葉</span>
+    <span>🟡 <strong>参考ワード</strong>：活用形など、単体では意味が伝わりにくい言葉</span>
+</div>
+""", unsafe_allow_html=True)
 
 
 # ── サイドバー ────────────────────────────────────────────
@@ -724,10 +743,15 @@ with tab1:
 # ═══════════════════════════════════════════════════════════
 with tab2:
     st.markdown(
-        f'<div class="section-heading">発見ワード一覧（{len(df_hits)} 件）</div>',
+        f'<div class="section-heading">発見ワード一覧（🟢 {len(df_hits_green)} 件 ＋ 🟡 {len(df_hits_yellow)} 件）</div>',
         unsafe_allow_html=True,
     )
-    st.caption("ワードをクリックすると「音声検証」タブで再生できます")
+    st.markdown("""
+    <div style="font-size:0.82rem;color:#666;line-height:1.7;margin-bottom:1rem">
+        🟢 <strong>新発見ワード</strong>：独立した意味を持つ言葉として音素回文が成立するもの<br>
+        🟡 <strong>参考ワード</strong>：動詞の活用形など、単体では意味が伝わりにくいもの（ファクトとして報告）
+    </div>
+    """, unsafe_allow_html=True)
 
     if len(df_hits) == 0:
         st.info("CSVファイルを配置するとここにワードが表示されます")
@@ -771,16 +795,25 @@ with tab2:
         # 通常ヒットをカテゴリ別に表示
         for pos in sorted(df_normal_hits["品詞"].unique().tolist()):
             df_pos = df_normal_hits[df_normal_hits["品詞"] == pos]
+            green_count = len(df_pos[df_pos["品質"] == "green"])
+            yellow_count = len(df_pos[df_pos["品質"] == "yellow"])
+            count_label = f"🟢{green_count}" + (f" 🟡{yellow_count}" if yellow_count > 0 else "")
             st.markdown(
-                f'<div class="section-heading">■ {pos}（{len(df_pos)}件）</div>',
+                f'<div class="section-heading">■ {pos}（{count_label}）</div>',
                 unsafe_allow_html=True,
             )
             cols = st.columns(3)
             for idx, (_, hrow) in enumerate(df_pos.iterrows()):
+                quality = hrow.get("品質", "green")
+                quality_icon = "🟢" if quality == "green" else "🟡"
+                badge_bg = "#2e7d32" if quality == "green" else "#f9a825"
+                badge_text = "新発見" if quality == "green" else "参考"
+                badge_color = "#fff" if quality == "green" else "#333"
+                border_color = "#2e7d32" if quality == "green" else "#f9a825"
                 with cols[idx % 3]:
                     st.markdown(f"""
-                    <div class="hit-card">
-                        <span class="hit-badge">発見</span>
+                    <div class="hit-card" style="border-left-color:{border_color}">
+                        <span class="hit-badge" style="background:{badge_bg};color:{badge_color}">{quality_icon} {badge_text}</span>
                         <div class="hit-word">{hrow['ワード']}</div>
                         <div class="hit-yomi">{hrow.get('ヨミガナ', '')}</div>
                         <div class="phoneme-row">[ {hrow.get('音素', '')} ]</div>
