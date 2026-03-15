@@ -36,6 +36,14 @@ html, body, [class*="css"] {
 [data-testid="stSidebar"] * {
     color: #555 !important;
 }
+/* サイドバー開閉ボタンを見えるように */
+[data-testid="collapsedControl"] button {
+    color: #1a237e !important;
+    background: #fff !important;
+    border: 1px solid #ddd !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+}
 
 /* ── ヘッダーセクション ── */
 header[data-testid="stHeader"] {
@@ -678,13 +686,6 @@ def render_fixed_player(tab_key):
             st.rerun()
 
 
-# ── ワード検索（タブ外・常時表示）───────────────────────────
-search_query = st.text_input(
-    "🔍 ワード検索",
-    placeholder="キーワードを入力して全ワードから検索...",
-    label_visibility="collapsed",
-)
-
 # ── タブ ─────────────────────────────────────────────────
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📋 総調査ワード",
@@ -699,29 +700,57 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 # Tab1: 総調査ワード
 # ═══════════════════════════════════════════════════════════
 with tab1:
-    df_display = df_all.copy()
+    # ── カテゴリボタン ──
+    categories = df_all.groupby("品詞").size().sort_values(ascending=False)
+    cat_labels = ["すべて"] + [f"{pos}（{cnt:,}）" for pos, cnt in categories.items()]
+    cat_keys = ["すべて"] + categories.index.tolist()
+
+    selected_cat = st.radio(
+        "カテゴリ",
+        cat_keys,
+        format_func=lambda x: x if x == "すべて" else f"{x}（{categories[x]:,}）",
+        horizontal=True,
+        label_visibility="collapsed",
+    )
+
+    df_display = df_all if selected_cat == "すべて" else df_all[df_all["品詞"] == selected_cat]
+
+    # ── 品詞細分類フィルター（カテゴリ選択時） ──
+    if selected_cat != "すべて":
+        subcats = df_display["品詞細分類"].value_counts()
+        if len(subcats) > 1:
+            sub_keys = ["すべて"] + subcats.index.tolist()
+            selected_sub = st.radio(
+                "細分類",
+                sub_keys,
+                format_func=lambda x: x if x == "すべて" else f"{x}（{subcats[x]:,}）",
+                horizontal=True,
+                label_visibility="collapsed",
+            )
+            if selected_sub != "すべて":
+                df_display = df_display[df_display["品詞細分類"] == selected_sub]
+
+    # ── ワード検索 ──
+    search_query = st.text_input(
+        "ワード検索",
+        placeholder="キーワードで絞り込み...",
+        label_visibility="collapsed",
+    )
     if search_query:
         df_display = df_display[df_display["ワード"].str.contains(search_query, na=False)]
-        st.markdown(
-            f'<div class="section-heading">検索結果（{len(df_display):,} 件）</div>',
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(
-            f'<div class="section-heading">全データ（{len(df_all):,} 件）</div>',
-            unsafe_allow_html=True,
-        )
 
-    def highlight_hits(row):
-        if str(row.get("品詞細分類", "")) == "伝説":
-            return ["background-color:#fff8e1;color:#e65100;font-weight:bold"] * len(row)
-        if row.get("回文判定") == "〇":
-            return ["background-color:#fce4ec;color:#c62828;font-weight:bold"] * len(row)
-        return [""] * len(row)
+    # ── 件数表示 ──
+    hit_count = len(df_display[df_display["回文判定"] == "〇"])
+    st.markdown(
+        f'<div class="section-heading">'
+        f'{len(df_display):,} 件'
+        f'{"　（うち回文ヒット: " + str(hit_count) + " 件）" if hit_count > 0 else ""}'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
     st.dataframe(
-        df_display[["品詞", "品詞細分類", "ワード", "ヨミガナ", "音素", "回文判定"]]
-        .style.apply(highlight_hits, axis=1),
+        df_display[["品詞", "品詞細分類", "ワード", "ヨミガナ", "音素", "回文判定"]],
         use_container_width=True,
         height=600,
     )
