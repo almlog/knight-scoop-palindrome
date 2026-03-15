@@ -597,8 +597,115 @@ def generate_audio(word):
     return mp3_fp.read(), rev_fp.read()
 
 
+# ── 共通: カード再生関数 ────────────────────────────────────
+def play_audio_inline(word, key_prefix):
+    """ボタン押下で即座に音声再生（固定バーで再生）。"""
+    b1, b2 = st.columns(2)
+    with b1:
+        if st.button("▶ 通常", key=f"{key_prefix}_n_{word}"):
+            st.session_state.play_word = word
+            st.session_state.play_mode = "normal"
+            st.rerun()
+    with b2:
+        if st.button("◀ 逆再生", key=f"{key_prefix}_r_{word}"):
+            st.session_state.play_word = word
+            st.session_state.play_mode = "reverse"
+            st.rerun()
+
+
+def render_word_cards(df_words, key_prefix, show_quality=False):
+    """ワードカードを品詞別に3列で表示。"""
+    if df_words.empty:
+        st.info("該当するワードはありません")
+        return
+
+    # 伝説ワード
+    df_leg = df_words[df_words["品詞細分類"] == "伝説"]
+    df_normal = df_words[df_words["品詞細分類"] != "伝説"]
+
+    if not df_leg.empty:
+        st.markdown('<div class="section-heading">👑 伝説のワード</div>', unsafe_allow_html=True)
+        for _, lrow in df_leg.iterrows():
+            st.markdown(f"""
+            <div class="legendary-card">
+                <span class="legendary-badge">👑 伝説</span>
+                <div class="legendary-word">{lrow['ワード']}</div>
+                <div style="font-family:'Share Tech Mono',monospace;font-size:0.85rem;
+                            color:#bf360c;margin-top:0.4rem">
+                    [ {lrow.get('音素', '')} ]
+                </div>
+                <div style="font-size:0.75rem;color:#999;margin-top:0.3rem">
+                    探偵ナイトスクープが世に知らしめた音素回文の原点
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            play_audio_inline(lrow['ワード'], f"{key_prefix}_leg")
+
+    for pos in sorted(df_normal["品詞"].unique().tolist()):
+        df_pos = df_normal[df_normal["品詞"] == pos]
+        if show_quality:
+            gc = len(df_pos[df_pos["品質"] == "green"])
+            yc = len(df_pos[df_pos["品質"] == "yellow"])
+            count_label = f"🟢{gc}" + (f" 🟡{yc}" if yc > 0 else "")
+        else:
+            count_label = f"{len(df_pos)}件"
+        st.markdown(
+            f'<div class="section-heading">■ {pos}（{count_label}）</div>',
+            unsafe_allow_html=True,
+        )
+        cols = st.columns(3)
+        for idx, (_, hrow) in enumerate(df_pos.iterrows()):
+            quality = hrow.get("品質", "green")
+            if quality == "green":
+                quality_icon, badge_bg, badge_text, badge_color, border_color = "🟢", "#2e7d32", "新発見", "#fff", "#2e7d32"
+            else:
+                quality_icon, badge_bg, badge_text, badge_color, border_color = "🟡", "#f9a825", "参考", "#333", "#f9a825"
+            with cols[idx % 3]:
+                st.markdown(f"""
+                <div class="hit-card" style="border-left-color:{border_color}">
+                    <span class="hit-badge" style="background:{badge_bg};color:{badge_color}">{quality_icon} {badge_text}</span>
+                    <div class="hit-word">{hrow['ワード']}</div>
+                    <div class="hit-yomi">{hrow.get('ヨミガナ', '')}</div>
+                    <div class="phoneme-row">[ {hrow.get('音素', '')} ]</div>
+                    <div class="hit-meta">{hrow.get('品詞細分類', '')}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                play_audio_inline(hrow['ワード'], f"{key_prefix}_{pos}")
+
+
+def render_fixed_player():
+    """固定プレイヤーバー（再生中のワードがあれば表示）。"""
+    if st.session_state.play_word:
+        pw = st.session_state.play_word
+        pm = st.session_state.play_mode
+        normal_b, rev_b = generate_audio(pw)
+        mode_label = "▶ 通常再生" if pm == "normal" else "◀ 逆再生"
+        st.markdown(
+            f'<div class="fixed-player-bar">'
+            f'<span class="fixed-player-word">{pw}</span>'
+            f'<span class="fixed-player-mode">{mode_label}</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        st.audio(
+            normal_b if pm == "normal" else rev_b,
+            format="audio/mp3",
+            autoplay=True,
+        )
+        if st.button("閉じる", key="close_player"):
+            st.session_state.play_word = None
+            st.session_state.play_mode = None
+            st.rerun()
+
+
 # ── タブ ─────────────────────────────────────────────────
-tab1, tab2, tab3 = st.tabs(["🎧 音声検証", "🎉 発見ワード一覧", "📋 全データ"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "🎧 音声検証",
+    f"🟢 新発見ワード（{len(df_hits_green)}）",
+    f"🟡 参考ワード（{len(df_hits_yellow)}）",
+    f"📊 回文ヒット合計（{len(df_hits)}）",
+    f"📋 総調査ワード（{len(df_all):,}）",
+])
 
 
 # ═══════════════════════════════════════════════════════════
@@ -739,117 +846,61 @@ with tab1:
 
 
 # ═══════════════════════════════════════════════════════════
-# Tab2: 発見ワード一覧
+# Tab2: 新発見ワード（緑）
 # ═══════════════════════════════════════════════════════════
 with tab2:
     st.markdown(
-        f'<div class="section-heading">発見ワード一覧（🟢 {len(df_hits_green)} 件 ＋ 🟡 {len(df_hits_yellow)} 件）</div>',
+        f'<div class="section-heading">🟢 新発見ワード（{len(df_hits_green)} 件）</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown("""
+    <div style="font-size:0.82rem;color:#666;margin-bottom:1rem">
+        独立した意味を持つ言葉として音素回文が成立するワード
+    </div>
+    """, unsafe_allow_html=True)
+    render_word_cards(df_hits_green, "green")
+    render_fixed_player()
+
+
+# ═══════════════════════════════════════════════════════════
+# Tab3: 参考ワード（黄）
+# ═══════════════════════════════════════════════════════════
+with tab3:
+    st.markdown(
+        f'<div class="section-heading">🟡 参考ワード（{len(df_hits_yellow)} 件）</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown("""
+    <div style="font-size:0.82rem;color:#666;margin-bottom:1rem">
+        動詞の活用形など、単体では意味が伝わりにくいワード（ファクトとして報告）
+    </div>
+    """, unsafe_allow_html=True)
+    render_word_cards(df_hits_yellow, "yellow")
+    render_fixed_player()
+
+
+# ═══════════════════════════════════════════════════════════
+# Tab4: 回文ヒット合計
+# ═══════════════════════════════════════════════════════════
+with tab4:
+    st.markdown(
+        f'<div class="section-heading">回文ヒット合計（{len(df_hits)} 件）</div>',
         unsafe_allow_html=True,
     )
     st.markdown("""
     <div style="font-size:0.82rem;color:#666;line-height:1.7;margin-bottom:1rem">
-        🟢 <strong>新発見ワード</strong>：独立した意味を持つ言葉として音素回文が成立するもの<br>
-        🟡 <strong>参考ワード</strong>：動詞の活用形など、単体では意味が伝わりにくいもの（ファクトとして報告）
+        🟢 <strong>新発見ワード</strong>：独立した意味を持つ言葉<br>
+        🟡 <strong>参考ワード</strong>：動詞の活用形など
     </div>
     """, unsafe_allow_html=True)
-
-    if len(df_hits) == 0:
-        st.info("CSVファイルを配置するとここにワードが表示されます")
-    else:
-        # 伝説のワードを最上部に単独表示
-        df_legendary = df_hits[df_hits["品詞細分類"] == "伝説"]
-        df_normal_hits = df_hits[df_hits["品詞細分類"] != "伝説"]
-
-        def play_audio_inline(word, key_prefix):
-            """ボタン押下で即座に音声再生（固定バーで再生）。"""
-            b1, b2 = st.columns(2)
-            with b1:
-                if st.button("▶ 通常", key=f"{key_prefix}_n_{word}"):
-                    st.session_state.play_word = word
-                    st.session_state.play_mode = "normal"
-                    st.rerun()
-            with b2:
-                if st.button("◀ 逆再生", key=f"{key_prefix}_r_{word}"):
-                    st.session_state.play_word = word
-                    st.session_state.play_mode = "reverse"
-                    st.rerun()
-
-        if not df_legendary.empty:
-            st.markdown('<div class="section-heading">👑 伝説のワード</div>', unsafe_allow_html=True)
-            for _, lrow in df_legendary.iterrows():
-                st.markdown(f"""
-                <div class="legendary-card">
-                    <span class="legendary-badge">👑 伝説</span>
-                    <div class="legendary-word">{lrow['ワード']}</div>
-                    <div style="font-family:'Share Tech Mono',monospace;font-size:0.85rem;
-                                color:#bf360c;margin-top:0.4rem">
-                        [ {lrow.get('音素', '')} ]
-                    </div>
-                    <div style="font-size:0.75rem;color:#999;margin-top:0.3rem">
-                        探偵ナイトスクープが世に知らしめた音素回文の原点
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                play_audio_inline(lrow['ワード'], "legend")
-
-        # 通常ヒットをカテゴリ別に表示
-        for pos in sorted(df_normal_hits["品詞"].unique().tolist()):
-            df_pos = df_normal_hits[df_normal_hits["品詞"] == pos]
-            green_count = len(df_pos[df_pos["品質"] == "green"])
-            yellow_count = len(df_pos[df_pos["品質"] == "yellow"])
-            count_label = f"🟢{green_count}" + (f" 🟡{yellow_count}" if yellow_count > 0 else "")
-            st.markdown(
-                f'<div class="section-heading">■ {pos}（{count_label}）</div>',
-                unsafe_allow_html=True,
-            )
-            cols = st.columns(3)
-            for idx, (_, hrow) in enumerate(df_pos.iterrows()):
-                quality = hrow.get("品質", "green")
-                quality_icon = "🟢" if quality == "green" else "🟡"
-                badge_bg = "#2e7d32" if quality == "green" else "#f9a825"
-                badge_text = "新発見" if quality == "green" else "参考"
-                badge_color = "#fff" if quality == "green" else "#333"
-                border_color = "#2e7d32" if quality == "green" else "#f9a825"
-                with cols[idx % 3]:
-                    st.markdown(f"""
-                    <div class="hit-card" style="border-left-color:{border_color}">
-                        <span class="hit-badge" style="background:{badge_bg};color:{badge_color}">{quality_icon} {badge_text}</span>
-                        <div class="hit-word">{hrow['ワード']}</div>
-                        <div class="hit-yomi">{hrow.get('ヨミガナ', '')}</div>
-                        <div class="phoneme-row">[ {hrow.get('音素', '')} ]</div>
-                        <div class="hit-meta">{hrow.get('品詞細分類', '')}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    play_audio_inline(hrow['ワード'], "hit")
-
-    # 固定プレイヤーバー（再生中のワードがあれば表示）
-    if st.session_state.play_word:
-        pw = st.session_state.play_word
-        pm = st.session_state.play_mode
-        normal_b, rev_b = generate_audio(pw)
-        mode_label = "▶ 通常再生" if pm == "normal" else "◀ 逆再生"
-        st.markdown(
-            f'<div class="fixed-player-bar">'
-            f'<span class="fixed-player-word">{pw}</span>'
-            f'<span class="fixed-player-mode">{mode_label}</span>'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
-        st.audio(
-            normal_b if pm == "normal" else rev_b,
-            format="audio/mp3",
-            autoplay=True,
-        )
-        if st.button("閉じる", key="close_player"):
-            st.session_state.play_word = None
-            st.session_state.play_mode = None
-            st.rerun()
+    render_word_cards(df_hits, "all", show_quality=True)
+    render_fixed_player()
 
 
 # ═══════════════════════════════════════════════════════════
-# Tab3: 全データ
+# Tab5: 総調査ワード
 # ═══════════════════════════════════════════════════════════
-with tab3:
+with tab5:
     st.markdown(
         f'<div class="section-heading">全データ（{len(df_target):,} 件）</div>',
         unsafe_allow_html=True,
