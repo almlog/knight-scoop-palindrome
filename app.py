@@ -701,10 +701,10 @@ def render_fixed_player():
 # ── タブ ─────────────────────────────────────────────────
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🎧 音声検証",
-    f"🟢 新発見ワード（{len(df_hits_green)}）",
-    f"🟡 参考ワード（{len(df_hits_yellow)}）",
-    f"📊 回文ヒット合計（{len(df_hits)}）",
-    f"📋 総調査ワード（{len(df_all):,}）",
+    "🟢 新発見ワード",
+    "🟡 参考ワード",
+    "📊 回文ヒット合計",
+    "📋 総調査ワード",
 ])
 
 
@@ -712,137 +712,115 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 # Tab1: 音声検証
 # ═══════════════════════════════════════════════════════════
 with tab1:
-    col_left, col_right = st.columns([1, 1.5])
+    # ── ワード選択 ──
+    word_options = df_target["ワード"].tolist()
+    if not word_options:
+        st.warning("条件に合うワードがありません")
+        st.stop()
 
-    with col_left:
-        st.markdown('<div class="section-heading">ワードを選択</div>', unsafe_allow_html=True)
+    default_index = 0
+    if st.session_state.selected_word_for_audio and st.session_state.selected_word_for_audio in word_options:
+        default_index = word_options.index(st.session_state.selected_word_for_audio)
 
-        word_options = df_target["ワード"].tolist()
-        if not word_options:
-            st.warning("条件に合うワードがありません")
-            st.stop()
+    selected_word = st.selectbox(
+        "聴きたいワードを選択",
+        word_options,
+        index=default_index,
+        label_visibility="collapsed",
+    )
 
-        # 他タブからの選択があればそれを初期値にする
-        default_index = 0
-        if st.session_state.selected_word_for_audio and st.session_state.selected_word_for_audio in word_options:
-            default_index = word_options.index(st.session_state.selected_word_for_audio)
+    row = df_target[df_target["ワード"] == selected_word].iloc[0]
+    is_hit = row["回文判定"] == "〇"
+    is_legendary = str(row.get("品詞細分類", "")) == "伝説"
+    phonemes = str(row.get("音素", "")).split()
+    phonemes_rev = phonemes[::-1]
 
-        selected_word = st.selectbox(
-            "聴きたいワードを選択",
-            word_options,
-            index=default_index,
-            label_visibility="collapsed",
-        )
-
-        row = df_target[df_target["ワード"] == selected_word].iloc[0]
-        is_hit = row["回文判定"] == "〇"
-        is_legendary = str(row.get("品詞細分類", "")) == "伝説"
-
-        phonemes = str(row.get("音素", "")).split()
-        phonemes_rev = phonemes[::-1]
-
-        # ワード大表示
-        if is_legendary:
-            badge = '<span style="background:linear-gradient(90deg,#ff8f00,#ffb300);color:#fff;font-size:0.65rem;padding:2px 10px;border-radius:10px;font-weight:900">👑 伝説のワード</span>'
-            word_color = "#e65100"
-        elif is_hit:
-            badge = '<span style="background:#e53935;color:white;font-size:0.65rem;padding:2px 8px;border-radius:10px;font-weight:900">発見ワード</span>'
-            word_color = "#1a237e"
+    # ── ワード表示 + 音声再生（横並び） ──
+    if is_legendary:
+        badge = '<span style="background:linear-gradient(90deg,#ff8f00,#ffb300);color:#fff;font-size:0.65rem;padding:2px 10px;border-radius:10px;font-weight:900">👑 伝説のワード</span>'
+        word_color = "#e65100"
+    elif is_hit:
+        quality = row.get("品質", "green")
+        if quality == "green":
+            badge = '<span style="background:#2e7d32;color:white;font-size:0.65rem;padding:2px 8px;border-radius:10px;font-weight:900">🟢 新発見</span>'
         else:
-            badge = ""
-            word_color = "#555"
+            badge = '<span style="background:#f9a825;color:#333;font-size:0.65rem;padding:2px 8px;border-radius:10px;font-weight:900">🟡 参考</span>'
+        word_color = "#1a237e"
+    else:
+        badge = ""
+        word_color = "#555"
 
-        st.markdown(f"""
-        <div class="selected-word-box">
-            {badge}
-            <div class="selected-word-main" style="color:{word_color}">{selected_word}</div>
-            <div style="font-size:0.85rem;color:#999;margin-top:0.3rem">
-                {row.get('品詞', '')} / {row.get('品詞細分類', '')}
-            </div>
-            <div style="font-family:'Share Tech Mono',monospace;font-size:0.88rem;color:#43a047;margin-top:0.5rem">
-                [ {" · ".join(phonemes)} ]
-            </div>
+    st.markdown(f"""
+    <div class="selected-word-box">
+        {badge}
+        <div class="selected-word-main" style="color:{word_color}">{selected_word}</div>
+        <div style="font-size:0.85rem;color:#999;margin-top:0.3rem">
+            {row.get('品詞', '')} / {row.get('品詞細分類', '')}
+        </div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:0.88rem;color:#43a047;margin-top:0.5rem">
+            [ {" · ".join(phonemes)} ]
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── 音声プレイヤー ──
+    with st.spinner("音声を生成中..."):
+        normal_bytes, reverse_bytes = generate_audio(selected_word)
+
+    a1, a2 = st.columns(2)
+    with a1:
+        st.markdown('<div class="player-label-normal">▶ 通常再生</div>', unsafe_allow_html=True)
+        st.audio(normal_bytes, format="audio/mp3")
+    with a2:
+        st.markdown('<div class="player-label-reverse">◀ 逆再生（検証）</div>', unsafe_allow_html=True)
+        st.audio(reverse_bytes, format="audio/mp3")
+
+    # ── 判定結果 ──
+    if is_legendary:
+        st.markdown("""
+        <div style="background:linear-gradient(135deg,#fff8e1,#fff3c4);
+                    border:2px solid #ff8f00;border-radius:16px;
+                    padding:1.2rem;margin-top:1rem;text-align:center;
+                    box-shadow:0 4px 16px rgba(255,143,0,0.1)">
+            <span style="font-size:1.8rem">👑</span>
+            <span style="font-family:'Noto Serif JP',serif;font-size:1.2rem;
+                        color:#e65100;margin-left:0.5rem;vertical-align:middle">
+                伝説のワード ── 探偵ナイトスクープが発見した原点にして頂点
+            </span>
+        </div>
+        """, unsafe_allow_html=True)
+    elif is_hit:
+        st.markdown("""
+        <div style="background:#f1f8e9;border:1px solid #2e7d32;border-radius:12px;
+                    padding:1rem;margin-top:1rem;text-align:center">
+            <span style="font-size:1.1rem;color:#2e7d32;font-weight:700">
+                ✅ 音素回文 確認済み ── 逆再生しても同じ音に聞こえます
+            </span>
         </div>
         """, unsafe_allow_html=True)
 
-        # 音素ビジュアライザー
-        st.markdown('<div class="section-heading">音素の順方向 vs 逆方向</div>', unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ── 音素分析セクション ──
+    col_fwd, col_rev = st.columns(2)
+    with col_fwd:
+        st.markdown('<div class="section-heading">▶ 順方向</div>', unsafe_allow_html=True)
         fwd_html = "".join([f'<span class="ph-chip">{p}</span>' for p in phonemes])
-        rev_html = "".join([f'<span class="ph-chip ph-chip-rev">{p}</span>' for p in phonemes_rev])
         st.markdown(f'<div class="phoneme-viz">{fwd_html}</div>', unsafe_allow_html=True)
-        st.markdown('<div style="text-align:center;color:#999;font-size:0.8rem;margin:0.3rem 0">▼ 逆再生</div>', unsafe_allow_html=True)
+    with col_rev:
+        st.markdown('<div class="section-heading">◀ 逆方向</div>', unsafe_allow_html=True)
+        rev_html = "".join([f'<span class="ph-chip ph-chip-rev">{p}</span>' for p in phonemes_rev])
         st.markdown(f'<div class="phoneme-viz">{rev_html}</div>', unsafe_allow_html=True)
 
-        if is_hit and phonemes:
-            st.markdown('<div class="section-heading">マッチング詳細</div>', unsafe_allow_html=True)
-            for f, r in zip(phonemes, phonemes_rev):
+    if is_hit and phonemes:
+        st.markdown('<div class="section-heading">マッチング詳細</div>', unsafe_allow_html=True)
+        match_cols = st.columns(min(len(phonemes), 8))
+        for i, (f, r) in enumerate(zip(phonemes, phonemes_rev)):
+            with match_cols[i % min(len(phonemes), 8)]:
                 if f == r:
-                    st.markdown(f"✅ `{f}` = `{r}`")
+                    st.markdown(f'<div style="text-align:center;padding:4px"><span style="color:#2e7d32">✅</span><br><code>{f}</code></div>', unsafe_allow_html=True)
                 elif {f, r} in [{"e", "y"}, {"o", "u"}]:
-                    st.markdown(f"🔁 `{f}` ≈ `{r}` （類似音）")
-
-    with col_right:
-        st.markdown('<div class="section-heading">音声再生</div>', unsafe_allow_html=True)
-
-        with st.spinner("音声を生成中..."):
-            normal_bytes, reverse_bytes = generate_audio(selected_word)
-
-        a1, a2 = st.columns(2)
-        with a1:
-            st.markdown('<div class="player-label-normal">▶ 通常再生</div>', unsafe_allow_html=True)
-            st.audio(normal_bytes, format="audio/mp3")
-        with a2:
-            st.markdown('<div class="player-label-reverse">◀ 逆再生（検証）</div>', unsafe_allow_html=True)
-            st.audio(reverse_bytes, format="audio/mp3")
-
-        if is_legendary:
-            st.markdown("""
-            <div style="background:linear-gradient(135deg,#fff8e1,#fff3c4);
-                        border:2px solid #ff8f00;border-radius:16px;
-                        padding:1.5rem;margin-top:1rem;text-align:center;
-                        box-shadow:0 4px 16px rgba(255,143,0,0.1)">
-                <div style="font-size:2.5rem">👑</div>
-                <div style="font-family:'Noto Serif JP',serif;font-size:1.4rem;
-                            color:#e65100;margin:0.3rem 0">
-                    伝説のワード
-                </div>
-                <div style="font-size:0.85rem;color:#bf360c;margin-top:0.5rem">
-                    探偵ナイトスクープが発見した原点にして頂点
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        elif is_hit:
-            st.markdown("""
-            <div style="background:#fff;border:1px solid #e53935;border-radius:12px;
-                        padding:1.2rem;margin-top:1rem;text-align:center;
-                        box-shadow:0 2px 8px rgba(229,57,53,0.08)">
-                <div style="font-size:1.2rem;color:#e53935;font-weight:700;margin:0.3rem 0">
-                    音素回文 確認済み
-                </div>
-                <div style="font-size:0.8rem;color:#888">
-                    このワードは逆再生しても同じ音に聞こえます
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        # 「オオエンマハンミョウ」ストーリーセクション
-        st.markdown('<div class="section-heading">このプロジェクトについて</div>', unsafe_allow_html=True)
-        st.markdown("""
-        <div style="background:#fff;border:1px solid #eee;border-radius:12px;padding:1.5rem;
-                    box-shadow:0 2px 8px rgba(0,0,0,0.03);line-height:1.8;font-size:0.88rem;color:#555">
-            <strong style="color:#1a237e">音素回文</strong>とは、音の最小単位（音素）に分解したとき、
-            前から読んでも後ろから読んでも同じ配列になる言葉です。<br><br>
-            探偵ナイトスクープで紹介された<strong style="color:#e65100">「オオエンマハンミョウ」</strong>は、
-            音素に分解すると <code style="background:#e8f5e9;padding:2px 6px;border-radius:4px;color:#2e7d32">
-            o o e m m a h a m m y o o</code> となり、
-            逆から読んでも同じ配列になります。<br><br>
-            毎週TVerで家族そろって番組を観ていた制作者が、この回に心を打たれ、
-            <strong style="color:#1a237e">「自分のプログラミング経験で貢献できる」</strong>と確信。
-            AIとプログラミングを駆使し、日本語辞書データ<strong>31万語以上</strong>を
-            音素解析して網羅的に探索した結果、<strong style="color:#e53935">351個</strong>の
-            音素回文を発見しました。
-        </div>
-        """, unsafe_allow_html=True)
+                    st.markdown(f'<div style="text-align:center;padding:4px"><span style="color:#f57c00">🔁</span><br><code>{f}≈{r}</code></div>', unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════
