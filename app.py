@@ -461,6 +461,8 @@ if "show_message" not in st.session_state:
     st.session_state.show_message = True
 if "play_word" not in st.session_state:
     st.session_state.play_word = None
+if "play_reading" not in st.session_state:
+    st.session_state.play_reading = None
 if "play_mode" not in st.session_state:
     st.session_state.play_mode = None
 
@@ -552,8 +554,8 @@ if len(df_hits) > 0:
 
 # ── 音声生成 ──────────────────────────────────────────────
 @st.cache_data
-def generate_audio(word):
-    tts = gTTS(text=word, lang="ja")
+def generate_audio(reading):
+    tts = gTTS(text=reading, lang="ja")
     mp3_fp = io.BytesIO()
     tts.write_to_fp(mp3_fp)
     mp3_fp.seek(0)
@@ -567,16 +569,18 @@ def generate_audio(word):
 
 
 # ── 共通: カード再生関数 ────────────────────────────────────
-def play_audio_inline(word, key_suffix):
+def play_audio_inline(word, reading, key_suffix):
     """ボタン押下で即座に音声再生（固定バーで再生）。"""
     b1, b2 = st.columns(2)
     with b1:
         if st.button("▶ 通常", key=f"n_{key_suffix}"):
             st.session_state.play_word = word
+            st.session_state.play_reading = reading
             st.session_state.play_mode = "normal"
     with b2:
         if st.button("◀ 逆再生", key=f"r_{key_suffix}"):
             st.session_state.play_word = word
+            st.session_state.play_reading = reading
             st.session_state.play_mode = "reverse"
 
 
@@ -606,7 +610,7 @@ def render_word_cards(df_words, key_prefix, show_quality=False):
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            play_audio_inline(lrow['ワード'], f"{key_prefix}_leg_{leg_idx}")
+            play_audio_inline(lrow['ワード'], lrow.get('ヨミガナ', lrow['ワード']), f"{key_prefix}_leg_{leg_idx}")
 
     for pos in sorted(df_normal["品詞"].unique().tolist()):
         df_pos = df_normal[df_normal["品詞"] == pos]
@@ -637,7 +641,7 @@ def render_word_cards(df_words, key_prefix, show_quality=False):
                     <div class="hit-meta">{hrow.get('品詞細分類', '')}</div>
                 </div>
                 """, unsafe_allow_html=True)
-                play_audio_inline(hrow['ワード'], f"{key_prefix}_{pos}_{idx}")
+                play_audio_inline(hrow['ワード'], hrow.get('ヨミガナ', hrow['ワード']), f"{key_prefix}_{pos}_{idx}")
 
 
 def render_fixed_player(tab_key):
@@ -648,9 +652,11 @@ def render_fixed_player(tab_key):
         mode_label = "▶ 通常再生" if pm == "normal" else "◀ 逆再生"
         mode_icon = "▶" if pm == "normal" else "◀"
 
+        pr = st.session_state.play_reading or pw
+
         with st.status(f"{mode_icon} {pw}", expanded=True) as status:
             status.update(label=f"{mode_icon} {pw}　─　🔄 音声を生成しています...", state="running")
-            normal_b, rev_b = generate_audio(pw)
+            normal_b, rev_b = generate_audio(pr)
             status.update(label=f"{mode_icon} {pw}　─　{mode_label}", state="complete")
 
         st.markdown(
@@ -667,6 +673,7 @@ def render_fixed_player(tab_key):
         )
         if st.button("閉じる", key=f"close_player_{tab_key}"):
             st.session_state.play_word = None
+            st.session_state.play_reading = None
             st.session_state.play_mode = None
             st.rerun()
 
@@ -737,8 +744,9 @@ with tab1:
     """, unsafe_allow_html=True)
 
     # ── 音声プレイヤー ──
+    selected_reading = str(row.get('ヨミガナ', selected_word))
     with st.spinner(f"「{selected_word}」の音声を生成中..."):
-        normal_bytes, reverse_bytes = generate_audio(selected_word)
+        normal_bytes, reverse_bytes = generate_audio(selected_reading)
 
     a1, a2 = st.columns(2)
     with a1:
