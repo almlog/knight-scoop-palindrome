@@ -709,8 +709,9 @@ with tab2:
         df_legendary = df_hits[df_hits["品詞細分類"] == "伝説"]
         df_normal_hits = df_hits[df_hits["品詞細分類"] != "伝説"]
 
-        def play_audio_inline(word, mode, key_prefix):
-            """ワード再生ボタンを配置。押すとsession_stateに保存してrerun。"""
+        def play_audio_inline(word, key_prefix):
+            """ボタンを配置し、該当ワードが再生中ならその場にプレイヤーを表示。"""
+            is_playing = st.session_state.play_word == word
             b1, b2 = st.columns(2)
             with b1:
                 if st.button("▶ 通常", key=f"{key_prefix}_n_{word}"):
@@ -722,27 +723,9 @@ with tab2:
                     st.session_state.play_word = word
                     st.session_state.play_mode = "reverse"
                     st.rerun()
-
-        # 再生中のワードがあれば表示
-        if st.session_state.play_word:
-            pw = st.session_state.play_word
-            pm = st.session_state.play_mode
-            normal_b, rev_b = generate_audio(pw)
-            st.markdown(
-                f'<div style="background:#fff;border:1px solid #1a237e;border-radius:12px;'
-                f'padding:1rem 1.5rem;margin-bottom:1rem;text-align:center;'
-                f'box-shadow:0 2px 8px rgba(0,0,0,0.06)">'
-                f'<span style="font-family:\'Noto Serif JP\',serif;font-size:1.3rem;color:#1a237e;'
-                f'font-weight:700">{pw}</span>'
-                f'<span style="font-size:0.8rem;color:#888;margin-left:1rem">'
-                f'{"▶ 通常再生" if pm == "normal" else "◀ 逆再生"}</span></div>',
-                unsafe_allow_html=True,
-            )
-            st.audio(normal_b if pm == "normal" else rev_b, format="audio/mp3")
-            if st.button("再生を閉じる", key="close_player"):
-                st.session_state.play_word = None
-                st.session_state.play_mode = None
-                st.rerun()
+            if is_playing:
+                normal_b, rev_b = generate_audio(word)
+                st.audio(normal_b if st.session_state.play_mode == "normal" else rev_b, format="audio/mp3")
 
         if not df_legendary.empty:
             st.markdown('<div class="section-heading">👑 伝説のワード</div>', unsafe_allow_html=True)
@@ -760,7 +743,7 @@ with tab2:
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
-                play_audio_inline(lrow['ワード'], None, "legend")
+                play_audio_inline(lrow['ワード'], "legend")
 
         # 通常ヒットをカテゴリ別に表示
         for pos in sorted(df_normal_hits["品詞"].unique().tolist()):
@@ -781,7 +764,7 @@ with tab2:
                         <div class="hit-meta">{hrow.get('品詞細分類', '')}</div>
                     </div>
                     """, unsafe_allow_html=True)
-                    play_audio_inline(hrow['ワード'], None, "hit")
+                    play_audio_inline(hrow['ワード'], "hit")
 
 
 # ═══════════════════════════════════════════════════════════
