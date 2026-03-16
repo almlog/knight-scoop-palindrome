@@ -78,6 +78,24 @@ def load_data(base_dir):
     return df, errors
 
 
+# ── 近似回文の承認リスト（ユーザーが聴いてOKと判定）────────
+# ワード名で承認（代表ワード）
+APPROVED_APPROXIMATE = frozenset([
+    "あえぎゃ",
+    "あえりゃ",
+    "おえよ",
+    "オオエンマハンミョウ",
+])
+
+# 音素パターンで承認（同じ音素の漢字バリエーションも含む）
+APPROVED_PHONEMES = frozenset([
+    "a e g y a",      # あえぎゃ / 喘ぎゃ
+    "a e r y a",      # あえりゃ / 会えりゃ / 合えりゃ / 和えりゃ / 逢えりゃ
+    "o e y o",        # おえよ / 終えよ / 負えよ / 追えよ
+    "o o e m m a h a m m y o o",  # オオエンマハンミョウ
+])
+
+
 # ── 回文検証 ──────────────────────────────────────────────
 def is_strict_palindrome(phonemes_str):
     """音素列が厳密に回文かどうかを判定。"""
@@ -96,12 +114,14 @@ def classify_word(row):
 
 
 def _classify_verification(row):
-    """回文判定〇のワードを厳密検証し、確認済み/要検証を返す。"""
+    """回文判定〇のワードを厳密検証 + 承認リスト照合。"""
     if row.get("回文判定") != "〇":
         return ""
     if is_strict_palindrome(row.get("音素", "")):
         return "確認済み"
-    return "要検証"
+    if row.get("ワード", "") in APPROVED_APPROXIMATE or row.get("音素", "").strip() in APPROVED_PHONEMES:
+        return "確認済み"
+    return ""  # NG（厳密回文でもなく承認もされていない）
 
 
 def prepare_datasets(df_all):

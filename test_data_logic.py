@@ -5,6 +5,7 @@ import tempfile
 import pandas as pd
 import pytest
 from data_logic import (
+    APPROVED_APPROXIMATE,
     classify_word,
     ensure_columns,
     inject_legendary,
@@ -187,9 +188,51 @@ class TestPrepareWithVerification:
              "ヨミガナ": "オウチュウ", "音素": "o o ch u u", "回文判定": "〇"},
         ])
         df_all, df_hits, _, _, _, df_review = prepare_datasets(df)
-        assert len(df_hits) == 0  # 確認済みには入らない
-        assert len(df_review) == 1
-        assert df_review.iloc[0]["検証"] == "要検証"
+        assert len(df_hits) == 0
+        assert len(df_review) == 0  # NGなので要検証にも残らない
+
+    def test_approved_approximate_is_confirmed(self):
+        """ユーザーが聴いてOKと判定した近似回文は確認済みに入る。"""
+        df = pd.DataFrame([
+            {"品詞": "動詞", "品詞細分類": "一般", "ワード": "あえぎゃ",
+             "ヨミガナ": "アエギャ", "音素": "a e g y a", "回文判定": "〇"},
+        ])
+        df_all, df_hits, _, _, _, df_review = prepare_datasets(df)
+        assert len(df_hits) == 1
+        assert df_hits.iloc[0]["検証"] == "確認済み"
+
+    def test_approved_list_contains_four(self):
+        assert "あえぎゃ" in APPROVED_APPROXIMATE
+        assert "あえりゃ" in APPROVED_APPROXIMATE
+        assert "おえよ" in APPROVED_APPROXIMATE
+        assert "オオエンマハンミョウ" in APPROVED_APPROXIMATE
+        assert len(APPROVED_APPROXIMATE) == 4
+
+    def test_kanji_variant_approved_by_phoneme(self):
+        """同じ音素パターンの漢字バリエーションも承認される。"""
+        df = pd.DataFrame([
+            {"品詞": "動詞", "品詞細分類": "一般", "ワード": "喘ぎゃ",
+             "ヨミガナ": "アエギャ", "音素": "a e g y a", "回文判定": "〇"},
+            {"品詞": "動詞", "品詞細分類": "一般", "ワード": "会えりゃ",
+             "ヨミガナ": "アエリャ", "音素": "a e r y a", "回文判定": "〇"},
+            {"品詞": "動詞", "品詞細分類": "一般", "ワード": "終えよ",
+             "ヨミガナ": "オエヨ", "音素": "o e y o", "回文判定": "〇"},
+        ])
+        df_all, df_hits, _, _, _, df_review = prepare_datasets(df)
+        assert len(df_hits) == 3  # 全部確認済み
+        assert len(df_review) == 0
+
+    def test_rejected_approximate_excluded(self):
+        """NGと判定された近似回文は確認済みにも要検証にも入らない。"""
+        df = pd.DataFrame([
+            {"品詞": "動物", "品詞細分類": "鳥類", "ワード": "オウチュウ",
+             "ヨミガナ": "オウチュウ", "音素": "o o ch u u", "回文判定": "〇"},
+            {"品詞": "名詞", "品詞細分類": "一般", "ワード": "欧風",
+             "ヨミガナ": "オウフウ", "音素": "o o f u u", "回文判定": "〇"},
+        ])
+        df_all, df_hits, _, _, _, df_review = prepare_datasets(df)
+        assert len(df_hits) == 0
+        assert len(df_review) == 0
 
     def test_non_hit_has_no_verification(self):
         df = pd.DataFrame([

@@ -636,14 +636,25 @@ def render_fixed_player(tab_key):
 
 
 # ── タブ ─────────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+_tab_names = [
     "📋 総調査ワード",
     "🟢 新発見ワード",
     "🟡 参考ワード",
     "📊 回文ヒット合計",
-    f"🔍 要検証（{len(df_needs_review)}）",
-    "🎧 音声検証",
-])
+]
+_has_review = len(df_needs_review) > 0
+if _has_review:
+    _tab_names.append(f"🔍 要検証（{len(df_needs_review)}）")
+_tab_names.append("🎧 音声検証")
+
+_tabs = st.tabs(_tab_names)
+tab1, tab2, tab3, tab4 = _tabs[0], _tabs[1], _tabs[2], _tabs[3]
+if _has_review:
+    tab5 = _tabs[4]
+    tab6 = _tabs[5]
+else:
+    tab5 = None
+    tab6 = _tabs[4]
 
 
 # ═══════════════════════════════════════════════════════════
@@ -802,43 +813,42 @@ with tab4:
 
 
 # ═══════════════════════════════════════════════════════════
-# Tab5: 要検証
+# Tab5: 要検証（要検証ワードがある場合のみ表示）
 # ═══════════════════════════════════════════════════════════
-with tab5:
-    st.markdown(
-        f'<div class="section-heading">🔍 要検証ワード（{len(df_needs_review)} 件）</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown("""
-    <div style="font-size:0.82rem;color:#666;margin-bottom:1rem">
-        音素の並びが厳密な回文ではないが、元データで回文判定〇とされたワード。<br>
-        逆再生を聴いて、同じ音に聞こえるか確認してください。
-    </div>
-    """, unsafe_allow_html=True)
-    if not df_needs_review.empty:
-        cols = st.columns(3)
-        for idx, (_, hrow) in enumerate(df_needs_review.iterrows()):
-            phonemes = hrow.get("音素", "").strip().split()
-            phonemes_rev = phonemes[::-1]
-            with cols[idx % 3]:
-                st.markdown(
-                    f'<div class="hit-card" style="border-left-color:#ff9800">'
-                    f'<span class="hit-badge" style="background:#ff9800;color:#fff">🔍 要検証</span>'
-                    f'<div class="hit-word">{hrow["ワード"]}</div>'
-                    f'<div class="hit-yomi">{hrow.get("ヨミガナ", "")}</div>'
-                    f'<div class="phoneme-row">順: [ {" ".join(phonemes)} ]</div>'
-                    f'<div class="phoneme-row" style="color:#e53935">逆: [ {" ".join(phonemes_rev)} ]</div>'
-                    f'<div class="hit-meta">{hrow.get("品詞", "")} / {hrow.get("品詞細分類", "")}</div>'
-                    f'</div>',
-                    unsafe_allow_html=True,
-                )
-                play_audio_inline(
-                    hrow["ワード"],
-                    hrow.get("ヨミガナ", hrow["ワード"]),
-                    f"review_{idx}",
-                )
-    else:
-        st.info("要検証ワードはありません")
+if _has_review and tab5 is not None:
+    with tab5:
+        st.markdown(
+            f'<div class="section-heading">🔍 要検証ワード（{len(df_needs_review)} 件）</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown("""
+        <div style="font-size:0.82rem;color:#666;margin-bottom:1rem">
+            音素の並びが厳密な回文ではないが、元データで回文判定〇とされたワード。<br>
+            逆再生を聴いて、同じ音に聞こえるか確認してください。
+        </div>
+        """, unsafe_allow_html=True)
+        if not df_needs_review.empty:
+            cols = st.columns(3)
+            for idx, (_, hrow) in enumerate(df_needs_review.iterrows()):
+                phonemes = hrow.get("音素", "").strip().split()
+                phonemes_rev = phonemes[::-1]
+                with cols[idx % 3]:
+                    st.markdown(
+                        f'<div class="hit-card" style="border-left-color:#ff9800">'
+                        f'<span class="hit-badge" style="background:#ff9800;color:#fff">🔍 要検証</span>'
+                        f'<div class="hit-word">{hrow["ワード"]}</div>'
+                        f'<div class="hit-yomi">{hrow.get("ヨミガナ", "")}</div>'
+                        f'<div class="phoneme-row">順: [ {" ".join(phonemes)} ]</div>'
+                        f'<div class="phoneme-row" style="color:#e53935">逆: [ {" ".join(phonemes_rev)} ]</div>'
+                        f'<div class="hit-meta">{hrow.get("品詞", "")} / {hrow.get("品詞細分類", "")}</div>'
+                        f'</div>',
+                        unsafe_allow_html=True,
+                    )
+                    play_audio_inline(
+                        hrow["ワード"],
+                        hrow.get("ヨミガナ", hrow["ワード"]),
+                        f"review_{idx}",
+                    )
 
 
 # ═══════════════════════════════════════════════════════════
