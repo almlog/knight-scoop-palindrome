@@ -139,6 +139,26 @@ def prepare_datasets(df_all):
     return df_all, df_hits, df_hits_green, df_hits_yellow, df_miss, df_needs_review
 
 
+# ── ページネーション ──────────────────────────────────────
+ITEMS_PER_PAGE = 30
+
+
+def paginate(df, page, per_page=None):
+    """DataFrameをページ分割。(page_df, total_pages) を返す。"""
+    if per_page is None:
+        per_page = ITEMS_PER_PAGE
+    total = len(df)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    start = (page - 1) * per_page
+    end = min(start + per_page, total)
+    return df.iloc[start:end], total_pages
+
+
+def filter_hits_only(df):
+    """確認済み回文ヒットのみを返す。"""
+    return df[(df["回文判定"] == "〇") & (df["検証"] == "確認済み")].copy()
+
+
 # ── 自由入力バリデーション ─────────────────────────────────
 FREE_INPUT_MAX_LENGTH = 30
 

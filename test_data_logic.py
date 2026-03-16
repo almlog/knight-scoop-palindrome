@@ -8,12 +8,15 @@ from data_logic import (
     APPROVED_APPROXIMATE,
     APPROVED_PHONEMES,
     FREE_INPUT_MAX_LENGTH,
+    ITEMS_PER_PAGE,
     classify_word,
     ensure_columns,
+    filter_hits_only,
     inject_legendary,
     is_strict_palindrome,
     load_csvs,
     load_data,
+    paginate,
     prepare_datasets,
     to_katakana,
     validate_free_input,
@@ -504,3 +507,74 @@ class TestLoadData:
         df, _ = load_data(str(tmp_path))
         assert "オオエンマハンミョウ" in df["ワード"].values
         assert len(df) == 1
+
+
+# ═══════════════════════════════════════════════════════════
+# paginate
+# ═══════════════════════════════════════════════════════════
+class TestPaginate:
+    def test_first_page(self):
+        df = pd.DataFrame({"x": range(100)})
+        page_df, total_pages = paginate(df, page=1)
+        assert total_pages == 4  # 100 / 30 = 3.33 → 4
+        assert len(page_df) == ITEMS_PER_PAGE
+        assert page_df.iloc[0]["x"] == 0
+
+    def test_last_page_partial(self):
+        df = pd.DataFrame({"x": range(100)})
+        page_df, total_pages = paginate(df, page=4)
+        assert len(page_df) == 10  # 100 - 90
+
+    def test_middle_page(self):
+        df = pd.DataFrame({"x": range(100)})
+        page_df, _ = paginate(df, page=2)
+        assert page_df.iloc[0]["x"] == 30
+
+    def test_empty_df(self):
+        df = pd.DataFrame({"x": []})
+        page_df, total_pages = paginate(df, page=1)
+        assert total_pages == 1
+        assert len(page_df) == 0
+
+    def test_exactly_one_page(self):
+        df = pd.DataFrame({"x": range(ITEMS_PER_PAGE)})
+        page_df, total_pages = paginate(df, page=1)
+        assert total_pages == 1
+        assert len(page_df) == ITEMS_PER_PAGE
+
+    def test_page_out_of_range_clamped(self):
+        df = pd.DataFrame({"x": range(10)})
+        page_df, total_pages = paginate(df, page=999)
+        assert total_pages == 1
+        assert len(page_df) == 0  # page 999 is beyond data
+
+    def test_custom_per_page(self):
+        df = pd.DataFrame({"x": range(25)})
+        page_df, total_pages = paginate(df, page=1, per_page=10)
+        assert total_pages == 3
+        assert len(page_df) == 10
+
+
+# ═══════════════════════════════════════════════════════════
+# filter_hits_only
+# ═══════════════════════════════════════════════════════════
+class TestFilterHitsOnly:
+    def test_filters_confirmed_hits(self, sample_df):
+        df_all, *_ = prepare_datasets(sample_df)
+        filtered = filter_hits_only(df_all)
+        assert all(filtered["検証"] == "確認済み")
+        assert all(filtered["回文判定"] == "〇")
+
+    def test_empty_df(self):
+        df = pd.DataFrame(columns=REQUIRED_COLUMNS + ["検証", "品質"])
+        filtered = filter_hits_only(df)
+        assert len(filtered) == 0
+
+    def test_no_hits_returns_empty(self):
+        df = pd.DataFrame([
+            {"品詞": "名詞", "品詞細分類": "一般", "ワード": "テスト",
+             "ヨミガナ": "テスト", "音素": "t e s u t o", "回文判定": "×",
+             "検証": "", "品質": "green"},
+        ])
+        filtered = filter_hits_only(df)
+        assert len(filtered) == 0

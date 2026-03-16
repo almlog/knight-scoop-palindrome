@@ -6,8 +6,11 @@ from data_logic import (
     prepare_datasets,
     generate_audio_bytes,
     validate_free_input,
+    filter_hits_only,
+    paginate,
     to_katakana,
     FREE_INPUT_MAX_LENGTH,
+    ITEMS_PER_PAGE,
 )
 
 # ── ページ設定 ─────────────────────────────────────────────
@@ -778,12 +781,11 @@ with tab1:
         key="toggle_hits_only",
     )
     if show_hits_only:
-        df_display = df_display[(df_display["回文判定"] == "〇") & (df_display["検証"] == "確認済み")]
+        df_display = filter_hits_only(df_display)
 
     # ── ページネーション ──
-    ITEMS_PER_PAGE = 30
     display_total = len(df_display)
-    total_pages = max(1, (display_total + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE)
+    _, total_pages = paginate(df_display, page=1)
 
     st.markdown(
         f'<div class="section-heading">{display_total:,} 件</div>',
@@ -803,9 +805,7 @@ with tab1:
     with page_col3:
         st.markdown(f"<div style='padding-top:0.5rem;color:#888;font-size:0.8rem'>/ {total_pages} ページ</div>", unsafe_allow_html=True)
 
-    start_idx = (current_page - 1) * ITEMS_PER_PAGE
-    end_idx = min(start_idx + ITEMS_PER_PAGE, display_total)
-    df_page = df_display.iloc[start_idx:end_idx]
+    df_page, _ = paginate(df_display, page=current_page)
 
     # ── カード表示（1ページ分のみ）──
     cols = st.columns(3)
@@ -846,7 +846,7 @@ with tab1:
             play_audio_inline(
                 row["ワード"],
                 row.get("ヨミガナ", row["ワード"]),
-                f"tab1_{start_idx + idx}",
+                f"tab1_p{current_page}_{idx}",
             )
 
 
