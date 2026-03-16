@@ -769,55 +769,85 @@ with tab1:
     if search_query:
         df_display = df_display[df_display["ワード"].str.contains(search_query, na=False)]
 
-    # ── 件数表示 ──
-    hit_count = len(df_display[df_display["回文判定"] == "〇"])
+    # ── 回文ヒットのみ表示トグル ──
+    hit_count = len(df_display[(df_display["回文判定"] == "〇") & (df_display["検証"] == "確認済み")])
     total_count = len(df_display)
+    show_hits_only = st.toggle(
+        f"回文ヒットのみ表示（{hit_count} 件）",
+        value=False,
+        key="toggle_hits_only",
+    )
+    if show_hits_only:
+        df_display = df_display[(df_display["回文判定"] == "〇") & (df_display["検証"] == "確認済み")]
+
+    # ── ページネーション ──
+    ITEMS_PER_PAGE = 30
+    display_total = len(df_display)
+    total_pages = max(1, (display_total + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE)
+
     st.markdown(
-        f'<div class="section-heading">'
-        f'{total_count:,} 件'
-        f'{"　（うち回文ヒット: " + str(hit_count) + " 件）" if hit_count > 0 else ""}'
-        f'</div>',
+        f'<div class="section-heading">{display_total:,} 件</div>',
         unsafe_allow_html=True,
     )
 
-    # ── 回文ヒットをカード表示（再生ボタン付き）──
-    df_display_hits = df_display[(df_display["回文判定"] == "〇") & (df_display["検証"] == "確認済み")]
-    if not df_display_hits.empty:
-        st.markdown(
-            f'<div class="section-heading">🔊 回文ヒット（{len(df_display_hits)} 件）</div>',
-            unsafe_allow_html=True,
+    page_col1, page_col2, page_col3 = st.columns([1, 2, 1])
+    with page_col2:
+        current_page = st.number_input(
+            "ページ",
+            min_value=1,
+            max_value=total_pages,
+            value=1,
+            step=1,
+            label_visibility="collapsed",
         )
-        cols = st.columns(3)
-        for idx, (_, hrow) in enumerate(df_display_hits.iterrows()):
-            quality = hrow.get("品質", "green")
+    with page_col3:
+        st.markdown(f"<div style='padding-top:0.5rem;color:#888;font-size:0.8rem'>/ {total_pages} ページ</div>", unsafe_allow_html=True)
+
+    start_idx = (current_page - 1) * ITEMS_PER_PAGE
+    end_idx = min(start_idx + ITEMS_PER_PAGE, display_total)
+    df_page = df_display.iloc[start_idx:end_idx]
+
+    # ── カード表示（1ページ分のみ）──
+    cols = st.columns(3)
+    for idx, (_, row) in enumerate(df_page.iterrows()):
+        is_hit = row.get("検証") == "確認済み"
+        quality = row.get("品質", "green")
+
+        if is_hit:
             if quality == "green":
                 icon, border_color, badge_bg, badge_color, badge_text = "🟢", "#2e7d32", "#2e7d32", "#fff", "新発見"
             else:
                 icon, border_color, badge_bg, badge_color, badge_text = "🟡", "#f9a825", "#f9a825", "#333", "参考"
-            with cols[idx % 3]:
+        else:
+            icon, border_color = "", "#ccc"
+
+        with cols[idx % 3]:
+            if is_hit:
                 st.markdown(
                     f'<div class="hit-card" style="border-left-color:{border_color}">'
                     f'<span class="hit-badge" style="background:{badge_bg};color:{badge_color}">{icon} {badge_text}</span>'
-                    f'<div class="hit-word">{hrow["ワード"]}</div>'
-                    f'<div class="hit-yomi">{hrow.get("ヨミガナ", "")}</div>'
-                    f'<div class="phoneme-row">[ {hrow.get("音素", "")} ]</div>'
-                    f'<div class="hit-meta">{hrow.get("品詞細分類", "")}</div>'
+                    f'<div class="hit-word">{row["ワード"]}</div>'
+                    f'<div class="hit-yomi">{row.get("ヨミガナ", "")}</div>'
+                    f'<div class="phoneme-row">[ {row.get("音素", "")} ]</div>'
+                    f'<div class="hit-meta">{row.get("品詞細分類", "")}</div>'
                     f'</div>',
                     unsafe_allow_html=True,
                 )
-                play_audio_inline(
-                    hrow["ワード"],
-                    hrow.get("ヨミガナ", hrow["ワード"]),
-                    f"tab1_{idx}",
+            else:
+                st.markdown(
+                    f'<div style="background:#fff;border:1px solid #eee;border-left:3px solid {border_color};'
+                    f'border-radius:8px;padding:0.8rem 1rem;margin:0.3rem 0">'
+                    f'<div style="font-size:1rem;color:#333;font-weight:500">{row["ワード"]}</div>'
+                    f'<div style="font-size:0.7rem;color:#999">{row.get("ヨミガナ", "")}　[ {row.get("音素", "")} ]</div>'
+                    f'<div style="font-size:0.65rem;color:#bbb">{row.get("品詞細分類", "")}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
                 )
-
-    # ── 全ワード一覧（折りたたみ）──
-    with st.expander(f"全ワード一覧（{total_count:,} 件）"):
-        st.dataframe(
-            df_display[["品詞", "品詞細分類", "ワード", "ヨミガナ", "音素", "回文判定"]],
-            use_container_width=True,
-            height=400,
-        )
+            play_audio_inline(
+                row["ワード"],
+                row.get("ヨミガナ", row["ワード"]),
+                f"tab1_{start_idx + idx}",
+            )
 
 
 
