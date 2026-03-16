@@ -1,7 +1,13 @@
 import os
 import base64
 import streamlit as st
-from data_logic import load_data, prepare_datasets, generate_audio_bytes
+from data_logic import (
+    load_data,
+    prepare_datasets,
+    generate_audio_bytes,
+    validate_free_input,
+    FREE_INPUT_MAX_LENGTH,
+)
 
 # ── ページ設定 ─────────────────────────────────────────────
 st.set_page_config(
@@ -640,6 +646,7 @@ def render_fixed_player(tab_key):
 
 # ── タブ ─────────────────────────────────────────────────
 _tab_names = [
+    "🎤 自由入力",
     "📋 総調査ワード",
     "🟢 新発見ワード",
     "🟡 参考ワード",
@@ -651,13 +658,72 @@ if _has_review:
 _tab_names.append("🎧 音声検証")
 
 _tabs = st.tabs(_tab_names)
-tab1, tab2, tab3, tab4 = _tabs[0], _tabs[1], _tabs[2], _tabs[3]
+tab_free = _tabs[0]
+tab1, tab2, tab3, tab4 = _tabs[1], _tabs[2], _tabs[3], _tabs[4]
 if _has_review:
-    tab5 = _tabs[4]
-    tab6 = _tabs[5]
+    tab5 = _tabs[5]
+    tab6 = _tabs[6]
 else:
     tab5 = None
-    tab6 = _tabs[4]
+    tab6 = _tabs[5]
+
+
+# ═══════════════════════════════════════════════════════════
+# Tab: 自由入力
+# ═══════════════════════════════════════════════════════════
+with tab_free:
+    st.markdown(
+        '<div class="section-heading">🎤 好きな言葉を逆再生してみよう</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(f"""
+    <div style="font-size:0.82rem;color:#666;margin-bottom:1rem">
+        任意のテキストを入力して、通常再生と逆再生を聴き比べられます。（{FREE_INPUT_MAX_LENGTH}文字以内）
+    </div>
+    """, unsafe_allow_html=True)
+
+    free_text = st.text_input(
+        "テキスト入力",
+        placeholder="例: オオエンマハンミョウ",
+        label_visibility="collapsed",
+        max_chars=FREE_INPUT_MAX_LENGTH,
+    )
+
+    if free_text:
+        ok, err_msg = validate_free_input(free_text)
+        if not ok:
+            st.warning(err_msg)
+        else:
+            free_text_clean = free_text.strip()
+            st.markdown(f"""
+            <div class="selected-word-box">
+                <div class="selected-word-main" style="color:#1a237e">{free_text_clean}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            with st.spinner(f"「{free_text_clean}」の音声を生成中..."):
+                free_normal, free_reverse = generate_audio(free_text_clean)
+
+            free_n_b64 = base64.b64encode(free_normal).decode()
+            free_r_b64 = base64.b64encode(free_reverse).decode()
+
+            col_n, col_r = st.columns(2)
+            with col_n:
+                st.markdown('<div class="player-label-normal">▶ 通常再生</div>', unsafe_allow_html=True)
+                st.markdown(
+                    f'<audio controls style="width:100%">'
+                    f'<source src="data:audio/mp3;base64,{free_n_b64}" type="audio/mp3">'
+                    f'</audio>',
+                    unsafe_allow_html=True,
+                )
+            with col_r:
+                st.markdown('<div class="player-label-reverse">◀ 逆再生</div>', unsafe_allow_html=True)
+                st.markdown(
+                    f'<audio controls style="width:100%">'
+                    f'<source src="data:audio/mp3;base64,{free_r_b64}" type="audio/mp3">'
+                    f'</audio>',
+                    unsafe_allow_html=True,
+                )
 
 
 # ═══════════════════════════════════════════════════════════

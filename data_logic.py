@@ -137,6 +137,19 @@ def prepare_datasets(df_all):
     return df_all, df_hits, df_hits_green, df_hits_yellow, df_miss, df_needs_review
 
 
+# ── 自由入力バリデーション ─────────────────────────────────
+FREE_INPUT_MAX_LENGTH = 30
+
+
+def validate_free_input(text):
+    """自由入力テキストのバリデーション。(ok, error_msg) を返す。"""
+    if not text or not text.strip():
+        return False, "テキストを入力してください"
+    if len(text.strip()) > FREE_INPUT_MAX_LENGTH:
+        return False, f"{FREE_INPUT_MAX_LENGTH}文字以内で入力してください"
+    return True, ""
+
+
 # ── 音声生成 ──────────────────────────────────────────────
 def generate_audio_bytes(reading):
     """ヨミガナから通常音声と逆再生音声のバイト列を返す。"""

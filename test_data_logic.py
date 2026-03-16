@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 from data_logic import (
     APPROVED_APPROXIMATE,
+    FREE_INPUT_MAX_LENGTH,
     classify_word,
     ensure_columns,
     inject_legendary,
@@ -13,6 +14,7 @@ from data_logic import (
     load_csvs,
     load_data,
     prepare_datasets,
+    validate_free_input,
     REQUIRED_COLUMNS,
 )
 
@@ -241,6 +243,31 @@ class TestPrepareWithVerification:
         ])
         df_all, *_ = prepare_datasets(df)
         assert df_all.iloc[0]["検証"] == ""
+
+
+# ── validate_free_input ────────────────────────────────────
+class TestValidateFreeInput:
+    def test_valid_input(self):
+        ok, msg = validate_free_input("オオエンマハンミョウ")
+        assert ok is True
+        assert msg == ""
+
+    def test_empty(self):
+        ok, msg = validate_free_input("")
+        assert ok is False
+
+    def test_too_long(self):
+        ok, msg = validate_free_input("あ" * (FREE_INPUT_MAX_LENGTH + 1))
+        assert ok is False
+        assert "30" in msg
+
+    def test_exactly_max(self):
+        ok, msg = validate_free_input("あ" * FREE_INPUT_MAX_LENGTH)
+        assert ok is True
+
+    def test_whitespace_only(self):
+        ok, msg = validate_free_input("   ")
+        assert ok is False
 
 
 # ── load_data (統合テスト) ─────────────────────────────────
