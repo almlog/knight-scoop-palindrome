@@ -12,6 +12,7 @@ CSV_FILES = [
     "knight_scoop_all_keywords_investigation.csv",
     "animals_palindrome_v4.csv",
     "inat_palindrome_v5.csv",
+    "yoshimoto_palindrome.csv",
 ]
 
 LEGENDARY_WORDS = [
