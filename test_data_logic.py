@@ -14,7 +14,9 @@ from data_logic import (
     load_csvs,
     load_data,
     prepare_datasets,
+    to_katakana,
     validate_free_input,
+    is_kana_only,
     REQUIRED_COLUMNS,
 )
 
@@ -268,6 +270,51 @@ class TestValidateFreeInput:
     def test_whitespace_only(self):
         ok, msg = validate_free_input("   ")
         assert ok is False
+
+    def test_kanji_rejected(self):
+        ok, msg = validate_free_input("漢字テスト")
+        assert ok is False
+        assert "ひらがな" in msg
+
+    def test_hiragana_ok(self):
+        ok, msg = validate_free_input("おおえんまはんみょう")
+        assert ok is True
+
+    def test_katakana_ok(self):
+        ok, msg = validate_free_input("オオエンマハンミョウ")
+        assert ok is True
+
+
+# ── to_katakana / is_kana_only ─────────────────────────────
+class TestToKatakana:
+    def test_hiragana_to_katakana(self):
+        assert to_katakana("おおえんまはんみょう") == "オオエンマハンミョウ"
+
+    def test_katakana_unchanged(self):
+        assert to_katakana("オオエンマハンミョウ") == "オオエンマハンミョウ"
+
+    def test_mixed(self):
+        assert to_katakana("あいうエオ") == "アイウエオ"
+
+
+class TestIsKanaOnly:
+    def test_hiragana(self):
+        assert is_kana_only("おおえんま") is True
+
+    def test_katakana(self):
+        assert is_kana_only("オオエンマ") is True
+
+    def test_mixed_kana(self):
+        assert is_kana_only("おおエンマ") is True
+
+    def test_kanji(self):
+        assert is_kana_only("大王") is False
+
+    def test_with_prolonged_sound(self):
+        assert is_kana_only("オオエンマー") is True
+
+    def test_empty(self):
+        assert is_kana_only("") is False
 
 
 # ── load_data (統合テスト) ─────────────────────────────────

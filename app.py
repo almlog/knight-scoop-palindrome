@@ -6,6 +6,7 @@ from data_logic import (
     prepare_datasets,
     generate_audio_bytes,
     validate_free_input,
+    to_katakana,
     FREE_INPUT_MAX_LENGTH,
 )
 
@@ -678,13 +679,13 @@ with tab_free:
     )
     st.markdown(f"""
     <div style="font-size:0.82rem;color:#666;margin-bottom:1rem">
-        任意のテキストを入力して、通常再生と逆再生を聴き比べられます。（{FREE_INPUT_MAX_LENGTH}文字以内）
+        ひらがな・カタカナで入力して、通常再生と逆再生を聴き比べられます。（{FREE_INPUT_MAX_LENGTH}文字以内）
     </div>
     """, unsafe_allow_html=True)
 
     free_text = st.text_input(
         "テキスト入力",
-        placeholder="例: オオエンマハンミョウ",
+        placeholder="例: おおえんまはんみょう",
         label_visibility="collapsed",
         max_chars=FREE_INPUT_MAX_LENGTH,
     )
@@ -695,33 +696,32 @@ with tab_free:
             st.warning(err_msg)
         else:
             free_text_clean = free_text.strip()
+            free_katakana = to_katakana(free_text_clean)
             st.markdown(f"""
             <div class="selected-word-box">
-                <div class="selected-word-main" style="color:#1a237e">{free_text_clean}</div>
+                <div class="selected-word-main" style="color:#1a237e">{free_katakana}</div>
+                {'<div style="font-size:0.85rem;color:#999;margin-top:0.3rem">入力: ' + free_text_clean + '</div>' if free_text_clean != free_katakana else ''}
             </div>
             """, unsafe_allow_html=True)
 
-            with st.spinner(f"「{free_text_clean}」の音声を生成中..."):
-                free_normal, free_reverse = generate_audio(free_text_clean)
+            with st.spinner(f"「{free_katakana}」の音声を生成中..."):
+                free_normal, free_reverse = generate_audio(free_katakana)
 
             free_n_b64 = base64.b64encode(free_normal).decode()
             free_r_b64 = base64.b64encode(free_reverse).decode()
 
+            cache_buster = hash(free_text_clean)
             col_n, col_r = st.columns(2)
             with col_n:
                 st.markdown('<div class="player-label-normal">▶ 通常再生</div>', unsafe_allow_html=True)
                 st.markdown(
-                    f'<audio controls style="width:100%">'
-                    f'<source src="data:audio/mp3;base64,{free_n_b64}" type="audio/mp3">'
-                    f'</audio>',
+                    f'<audio controls style="width:100%" src="data:audio/mp3;base64,{free_n_b64}#n{cache_buster}"></audio>',
                     unsafe_allow_html=True,
                 )
             with col_r:
                 st.markdown('<div class="player-label-reverse">◀ 逆再生</div>', unsafe_allow_html=True)
                 st.markdown(
-                    f'<audio controls style="width:100%">'
-                    f'<source src="data:audio/mp3;base64,{free_r_b64}" type="audio/mp3">'
-                    f'</audio>',
+                    f'<audio controls style="width:100%" src="data:audio/mp3;base64,{free_r_b64}#r{cache_buster}"></audio>',
                     unsafe_allow_html=True,
                 )
 

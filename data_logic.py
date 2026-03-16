@@ -140,13 +140,39 @@ def prepare_datasets(df_all):
 # ── 自由入力バリデーション ─────────────────────────────────
 FREE_INPUT_MAX_LENGTH = 30
 
+import re
+
+_KANA_PATTERN = re.compile(r'^[\u3040-\u309F\u30A0-\u30FF\u30FC]+$')
+
+
+def is_kana_only(text):
+    """ひらがな・カタカナ・長音符のみで構成されているか。"""
+    if not text:
+        return False
+    return bool(_KANA_PATTERN.match(text))
+
+
+def to_katakana(text):
+    """ひらがなをカタカナに変換。カタカナはそのまま。"""
+    return text.translate(str.maketrans(
+        'ぁあぃいぅうぇえぉおかがきぎくぐけげこごさざしじすずせぜそぞ'
+        'ただちぢっつづてでとどなにぬねのはばぱひびぴふぶぷへべぺほぼぽ'
+        'まみむめもゃやゅゆょよらりるれろゎわゐゑをんゔ',
+        'ァアィイゥウェエォオカガキギクグケゲコゴサザシジスズセゼソゾ'
+        'タダチヂッツヅテデトドナニヌネノハバパヒビピフブプヘベペホボポ'
+        'マミムメモャヤュユョヨラリルレロヮワヰヱヲンヴ',
+    ))
+
 
 def validate_free_input(text):
     """自由入力テキストのバリデーション。(ok, error_msg) を返す。"""
     if not text or not text.strip():
         return False, "テキストを入力してください"
-    if len(text.strip()) > FREE_INPUT_MAX_LENGTH:
+    stripped = text.strip()
+    if len(stripped) > FREE_INPUT_MAX_LENGTH:
         return False, f"{FREE_INPUT_MAX_LENGTH}文字以内で入力してください"
+    if not is_kana_only(stripped):
+        return False, "ひらがな・カタカナで入力してください"
     return True, ""
 
 
