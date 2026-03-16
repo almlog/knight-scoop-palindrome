@@ -1,6 +1,7 @@
 import os
 import base64
 import streamlit as st
+import streamlit.components.v1 as components
 from data_logic import (
     load_data,
     prepare_datasets,
@@ -635,9 +636,10 @@ def render_fixed_player(tab_key):
         pc = st.session_state.play_count
         audio_bytes = normal_b if pm == "normal" else rev_b
         audio_b64 = base64.b64encode(audio_bytes).decode()
-        st.markdown(
-            f'<audio autoplay controls style="width:100%" src="data:audio/mp3;base64,{audio_b64}#{pc}"></audio>',
-            unsafe_allow_html=True,
+        components.html(
+            f'<audio id="ap_{pc}" controls style="width:100%" src="data:audio/mp3;base64,{audio_b64}"></audio>'
+            f'<script>document.getElementById("ap_{pc}").play();</script>',
+            height=54,
         )
         if st.button("閉じる", key=f"close_player_{tab_key}"):
             st.session_state.play_word = None
