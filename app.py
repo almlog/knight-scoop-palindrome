@@ -780,55 +780,44 @@ with tab1:
         unsafe_allow_html=True,
     )
 
-    # ── ワード表示 ──
-    MAX_CARD_ROWS = 5000
-    if len(df_display) > MAX_CARD_ROWS:
+    # ── 回文ヒットをカード表示（再生ボタン付き）──
+    df_display_hits = df_display[(df_display["回文判定"] == "〇") & (df_display["検証"] == "確認済み")]
+    if not df_display_hits.empty:
+        st.markdown(
+            f'<div class="section-heading">🔊 回文ヒット（{len(df_display_hits)} 件）</div>',
+            unsafe_allow_html=True,
+        )
+        cols = st.columns(3)
+        for idx, (_, hrow) in enumerate(df_display_hits.iterrows()):
+            quality = hrow.get("品質", "green")
+            if quality == "green":
+                icon, border_color, badge_bg, badge_color, badge_text = "🟢", "#2e7d32", "#2e7d32", "#fff", "新発見"
+            else:
+                icon, border_color, badge_bg, badge_color, badge_text = "🟡", "#f9a825", "#f9a825", "#333", "参考"
+            with cols[idx % 3]:
+                st.markdown(
+                    f'<div class="hit-card" style="border-left-color:{border_color}">'
+                    f'<span class="hit-badge" style="background:{badge_bg};color:{badge_color}">{icon} {badge_text}</span>'
+                    f'<div class="hit-word">{hrow["ワード"]}</div>'
+                    f'<div class="hit-yomi">{hrow.get("ヨミガナ", "")}</div>'
+                    f'<div class="phoneme-row">[ {hrow.get("音素", "")} ]</div>'
+                    f'<div class="hit-meta">{hrow.get("品詞細分類", "")}</div>'
+                    f'</div>',
+                    unsafe_allow_html=True,
+                )
+                play_audio_inline(
+                    hrow["ワード"],
+                    hrow.get("ヨミガナ", hrow["ワード"]),
+                    f"tab1_{idx}",
+                )
+
+    # ── 全ワード一覧（折りたたみ）──
+    with st.expander(f"全ワード一覧（{total_count:,} 件）"):
         st.dataframe(
             df_display[["品詞", "品詞細分類", "ワード", "ヨミガナ", "音素", "回文判定"]],
             use_container_width=True,
-            height=600,
+            height=400,
         )
-        st.caption(f"※ {MAX_CARD_ROWS:,}件以下に絞り込むとカード表示に切り替わります")
-    else:
-        cols = st.columns(3)
-        for idx, (_, row) in enumerate(df_display.iterrows()):
-            is_hit = row["回文判定"] == "〇"
-            quality = row.get("品質", "green")
-
-            if is_hit:
-                if quality == "green":
-                    icon, border_color, badge_bg, badge_color, badge_text = "🟢", "#2e7d32", "#2e7d32", "#fff", "新発見"
-                else:
-                    icon, border_color, badge_bg, badge_color, badge_text = "🟡", "#f9a825", "#f9a825", "#333", "参考"
-            else:
-                icon, border_color, badge_bg, badge_color, badge_text = "", "#e0e0e0", "", "", ""
-
-            with cols[idx % 3]:
-                if is_hit:
-                    st.markdown(
-                        f'<div class="hit-card" style="border-left-color:{border_color}">'
-                        f'<span class="hit-badge" style="background:{badge_bg};color:{badge_color}">{icon} {badge_text}</span>'
-                        f'<div class="hit-word">{row["ワード"]}</div>'
-                        f'<div class="hit-yomi">{row.get("ヨミガナ", "")}</div>'
-                        f'<div class="phoneme-row">[ {row.get("音素", "")} ]</div>'
-                        f'<div class="hit-meta">{row.get("品詞細分類", "")}</div>'
-                        f'</div>',
-                        unsafe_allow_html=True,
-                    )
-                    play_audio_inline(
-                        row["ワード"],
-                        row.get("ヨミガナ", row["ワード"]),
-                        f"tab1_{idx}",
-                    )
-                else:
-                    st.markdown(
-                        f'<div style="background:#fafafa;border:1px solid #eee;border-left:3px solid #e0e0e0;'
-                        f'border-radius:8px;padding:0.6rem 0.8rem;margin:0.3rem 0">'
-                        f'<div style="font-size:0.95rem;color:#666">{row["ワード"]}</div>'
-                        f'<div style="font-size:0.65rem;color:#bbb">{row.get("ヨミガナ", "")}　{row.get("品詞細分類", "")}</div>'
-                        f'</div>',
-                        unsafe_allow_html=True,
-                    )
 
 
 
