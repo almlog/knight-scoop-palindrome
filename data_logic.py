@@ -119,7 +119,8 @@ def _classify_verification(row):
         return ""
     if is_strict_palindrome(row.get("音素", "")):
         return "確認済み"
-    if row.get("ワード", "") in APPROVED_APPROXIMATE or row.get("音素", "").strip() in APPROVED_PHONEMES:
+    phonemes = row.get("音素", "") or ""
+    if row.get("ワード", "") in APPROVED_APPROXIMATE or phonemes.strip() in APPROVED_PHONEMES:
         return "確認済み"
     return ""  # NG（厳密回文でもなく承認もされていない）
 
