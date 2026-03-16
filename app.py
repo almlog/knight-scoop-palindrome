@@ -636,9 +636,7 @@ def render_fixed_player(tab_key):
         audio_bytes = normal_b if pm == "normal" else rev_b
         audio_b64 = base64.b64encode(audio_bytes).decode()
         st.markdown(
-            f'<audio autoplay controls style="width:100%">'
-            f'<source src="data:audio/mp3;base64,{audio_b64}#t={pc}" type="audio/mp3">'
-            f'</audio>',
+            f'<audio autoplay controls style="width:100%" src="data:audio/mp3;base64,{audio_b64}#{pc}"></audio>',
             unsafe_allow_html=True,
         )
         if st.button("閉じる", key=f"close_player_{tab_key}"):
